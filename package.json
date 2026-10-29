@@ -1,0 +1,14 @@
+{
+  "name": "rasun",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev:admin": "pnpm --filter @rasun/admin dev",
+    "dev:dapp": "pnpm --filter @rasun/dapp dev:h5",
+    "dev:api": "pnpm --filter @rasun/api start:dev",
+    "db:setup": "pnpm --filter @rasun/api db:setup",
+    "contract:test": "pnpm --dir contracts test",
+    "contract:compile": "pnpm --dir contracts compile"
+  }
+}

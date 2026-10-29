@@ -1,0 +1,16 @@
+node_modules/
+.pnpm-store/
+dist/
+unpackage/
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+coverage/
+.DS_Store

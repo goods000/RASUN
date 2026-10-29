@@ -1,0 +1,10 @@
+{
+  "name": "RASUN",
+  "appid": "__UNI__RASUNDEMO",
+  "description": "RASUN DApp scaffold",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "h5": {
+    "title": "RASUN"
+  }
+}

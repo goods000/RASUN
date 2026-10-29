@@ -1,0 +1,15 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "RASUN",
+        "navigationBarBackgroundColor": "#17122e",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTitleText": "RASUN"
+  }
+}

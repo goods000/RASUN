@@ -1,7 +1,16 @@
-import { command, run, waitFor, stop, root } from "./process.mjs";
+import {
+  command,
+  run,
+  waitFor,
+  stop,
+  root,
+  env,
+  localOverrides,
+} from "./process.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import net from "node:net";
+Object.assign(env, localOverrides);
 const children = [];
 let closing = false;
 function close(code = 0) {
@@ -26,13 +35,14 @@ async function assertFree(port) {
     s.listen(port, "127.0.0.1", () => s.close(resolve));
   });
 }
-function start(name, args) {
+function start(name, args, childEnv) {
   const dir = path.join(root, ".local/logs");
   fs.mkdirSync(dir, { recursive: true });
   const fd = fs.openSync(path.join(dir, name + ".log"), "w");
   const child = command(args, {
     detached: process.platform !== "win32",
     stdio: ["ignore", fd, fd],
+    ...(childEnv ? { env: childEnv } : {}),
   });
   fs.closeSync(fd);
   children.push(child);
@@ -93,11 +103,28 @@ try {
     "--network",
     "localhost",
   ]);
-  start("api", ["--filter", "@rasun/api", "start"]);
+  start("api", ["--filter", "@rasun/api", "start"], {
+    ...env,
+    RPC_URL: "http://127.0.0.1:8545",
+    DEPLOYMENT_FILE: "deployments/local.json",
+    PORT: "3000",
+    CONFIRMATIONS: "0",
+    PUBLIC_RPC_URL: "http://127.0.0.1:8545",
+  });
   await waitFor(
     "http://127.0.0.1:3000/api/health",
     (h) => h.chain === "ready" && !h.index.error,
   );
+  const actual = await (await fetch("http://127.0.0.1:3000/api/config")).json();
+  const expected = JSON.parse(
+    fs.readFileSync(path.join(root, "deployments/local.json"), "utf8"),
+  );
+  if (
+    actual.chainId !== 31337 ||
+    actual.mode !== "local" ||
+    actual.addresses.token !== expected.addresses.token
+  )
+    throw Error("Local API deployment mismatch");
   start("dapp", ["dev:dapp"]);
   start("admin", ["dev:admin"]);
   for (const port of [5173, 5174]) {

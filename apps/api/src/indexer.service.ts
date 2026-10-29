@@ -78,16 +78,19 @@ export class IndexerService implements OnModuleInit, OnModuleDestroy {
         ]),
       );
       if (from <= to) {
-        const logs = await this.chain.provider.getLogs({
-          address: Object.values(c.addresses) as string[],
-          fromBlock: from,
-          toBlock: to,
-        });
+        let previousHash = last?.hash;
         for (let n = from; n <= to; n++) {
           const block = await this.chain.provider.getBlock(n);
           if (!block?.hash) throw Error("Missing block");
+          if (previousHash && block.parentHash !== previousHash)
+            throw Error("Reorg at index cursor");
+          // EIP-234 binds even an empty log response to this exact block.
+          const logs = await this.chain.provider.getLogs({
+            address: Object.values(c.addresses) as string[],
+            blockHash: block.hash,
+          });
           const events: Prisma.ChainEventCreateInput[] = [];
-          for (const log of logs.filter((l) => l.blockNumber === n)) {
+          for (const log of logs) {
             if (log.blockHash !== block.hash)
               throw Error("Reorg while indexing");
             const parsed = interfaces[log.address.toLowerCase()]?.parseLog(log);
@@ -140,6 +143,7 @@ export class IndexerService implements OnModuleInit, OnModuleDestroy {
               update: { hash: block.hash! },
             });
           });
+          previousHash = block.hash;
         }
       }
       const row = await this.db.indexedBlock.findFirst({

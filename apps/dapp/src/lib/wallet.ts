@@ -39,7 +39,13 @@ export class WalletSession {
     const version = this.version;
     const accounts = await this.raw.request({ method: "eth_requestAccounts" });
     const chain = Number(await this.raw.request({ method: "eth_chainId" }));
-    if (version !== this.version) return;
+    if (version !== this.version) {
+      if (this.chainId === 0 && this.account) {
+        this.chainId = chain;
+        this.touch();
+      }
+      return;
+    }
     this.account = accounts[0] || "";
     this.chainId = chain;
     this.touch();
@@ -47,6 +53,48 @@ export class WalletSession {
   assertReady(chainId: number) {
     if (!this.account) throw Error("CONNECT_FIRST");
     if (this.chainId !== chainId) throw Error("WRONG_NETWORK");
+  }
+  guardedProvider(
+    chainId: number,
+    generation: number,
+    sender: string,
+  ): EIP1193 {
+    const raw = this.raw;
+    if (!raw) throw Error("NO_WALLET");
+    const valid = () => {
+      if (
+        this.version !== generation ||
+        this.account.toLowerCase() !== sender.toLowerCase()
+      )
+        throw Error("WALLET_CHANGED");
+      this.assertReady(chainId);
+    };
+    return {
+      request: async (request) => {
+        if (request.method !== "eth_sendTransaction")
+          return raw.request(request);
+        valid();
+        const actualChain = Number(
+          await raw.request({ method: "eth_chainId" }),
+        );
+        const accounts = await raw.request({ method: "eth_accounts" });
+        valid();
+        if (actualChain !== chainId) throw Error("WRONG_NETWORK");
+        const transaction = request.params?.[0];
+        if (
+          !accounts?.some(
+            (a: string) => a.toLowerCase() === sender.toLowerCase(),
+          ) ||
+          !transaction ||
+          transaction.from?.toLowerCase() !== sender.toLowerCase()
+        )
+          throw Error("WALLET_CHANGED");
+        return raw.request({
+          method: "eth_sendTransaction",
+          params: [{ ...transaction, chainId: "0x" + chainId.toString(16) }],
+        });
+      },
+    };
   }
   async switchChain(config: any) {
     if (!this.raw) throw Error("NO_WALLET");

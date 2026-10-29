@@ -6,6 +6,7 @@ export default defineComponent({
   setup(props, { attrs, emit }) {
     return () =>
       h("input", {
+        type: "text",
         ...attrs,
         value: props.modelValue,
         onInput: (event: Event) =>

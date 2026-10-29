@@ -17,6 +17,7 @@ const search = ref(""),
   eventTotal = ref(0);
 let timer: ReturnType<typeof setInterval>;
 let generation = 0;
+let queryGeneration = 0;
 const tabs = [
   { key: "overview", label: "运行总览", icon: "◈" },
   { key: "users", label: "用户与排名", icon: "◉" },
@@ -75,6 +76,7 @@ async function refresh() {
   }
 }
 async function query(value?: string) {
+  const id = ++queryGeneration;
   if (value) search.value = value;
   wallet.value = null;
   queryError.value = "";
@@ -83,9 +85,11 @@ async function query(value?: string) {
     return;
   }
   try {
-    wallet.value = await api("wallet/" + search.value);
+    const result = await api("wallet/" + search.value);
+    if (id === queryGeneration) wallet.value = result;
   } catch {
-    queryError.value = "钱包查询失败，请检查地址校验和或链上服务";
+    if (id === queryGeneration)
+      queryError.value = "钱包查询失败，请检查地址校验和或链上服务";
   }
 }
 function date(ts: number) {

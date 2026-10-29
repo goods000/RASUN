@@ -37,7 +37,7 @@ pnpm install --frozen-lockfile
 pnpm dev:local
 ```
 
-此命令创建 SQLite 索引、编译 API、启动本地 Hardhat 链、部署合约、生成 `deployments/local.json`、准备持仓与邀请样例、结算一个完整日，再启动 API、DApp 和后台。
+此命令在 `.local/index.db` 创建隔离的本地 SQLite 索引、编译 API、启动本地 Hardhat 链、部署合约、生成 `deployments/local.json`、准备持仓与邀请样例、结算一个完整日，再启动 API、DApp 和后台。
 
 - DApp：本机端口 **5173**。
 - 后台：本机端口 **5174**，只读，不托管私钥。
@@ -119,7 +119,7 @@ API 可将 `apps/api/.env.example` 复制为 `apps/api/.env`，设置 RPC、部�
 pnpm --dir contracts exec hardhat run scripts/deploy.ts --network bscTestnet
 ```
 
-生成 `deployments/testnet.json`。API 设置 `DEPLOYMENT_FILE=deployments/testnet.json` 与对应 `RPC_URL`，默认等待 12 个确认。结算脚本通过相同配置和网络运行：
+生成 `deployments/testnet.json`。API 设置 `DEPLOYMENT_FILE=deployments/testnet.json` 与对应 `RPC_URL`，默认等待 12 个确认。结算脚本会按所选网络默认读取对应部署文件（测试网为 `deployments/testnet.json`），也可在根 `.env` 用 `DEPLOYMENT_FILE` 覆盖：
 
 ```sh
 pnpm --dir contracts exec hardhat run scripts/settle.ts --network bscTestnet

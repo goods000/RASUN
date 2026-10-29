@@ -6,7 +6,7 @@
     "start:dev": "nest start --watch",
     "build": "nest build",
     "start": "node dist/main.js",
-    "db:setup": "prisma generate && prisma db push",
+    "db:setup": "prisma generate && node scripts/db-setup.mjs",
     "db:studio": "prisma studio"
   },
   "dependencies": {

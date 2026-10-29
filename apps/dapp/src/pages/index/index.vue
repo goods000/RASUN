@@ -126,7 +126,9 @@ async function transact(kind: "holding" | "referral" | "bind") {
   feedback("pending", "pending");
   try {
     session.assertReady(config.value.chainId);
-    const provider = new BrowserProvider(session.raw!);
+    const provider = new BrowserProvider(
+      session.guardedProvider(config.value.chainId, generation, sender),
+    );
     const signer = await provider.getSigner(sender);
     if (generation !== session.version) throw Error("WALLET_CHANGED");
     const contract = new Contract(
@@ -147,6 +149,10 @@ async function transact(kind: "holding" | "referral" | "bind") {
     feedback("success", "success");
     await refresh();
   } catch (e: any) {
+    if (generation !== session.version) {
+      feedback("walletChanged");
+      return;
+    }
     feedback(
       e.message === "WRONG_NETWORK"
         ? "switch"
@@ -260,7 +266,7 @@ onUnmounted(() => {
         >×</NativeButton
       ></view
     >
-    <view v-if="error" class="error-panel"
+    <view v-if="error" role="alert" class="error-panel"
       >{{ t("unavailable")
       }}<NativeButton @click="refresh">{{ t("retry") }} ↻</NativeButton></view
     >

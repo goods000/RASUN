@@ -41,9 +41,14 @@ export async function run(args) {
     );
   });
 }
-export async function waitFor(url, check = () => true, timeout = 60000) {
+export async function waitFor(
+  url,
+  check = () => true,
+  timeout = 60000,
+  signal,
+) {
   const until = Date.now() + timeout;
-  while (Date.now() < until) {
+  while (Date.now() < until && !signal?.aborted) {
     try {
       const r = await fetch(url, { signal: AbortSignal.timeout(1500) });
       if (r.ok && check(await r.json())) return;
@@ -76,3 +81,12 @@ export async function assertFree(port) {
     s.listen(port, "127.0.0.1", () => s.close(resolve));
   });
 }
+
+export const localOverrides = {
+  RPC_URL: "http://127.0.0.1:8545",
+  DEPLOYMENT_FILE: "deployments/local.json",
+  PORT: "3000",
+  CONFIRMATIONS: "0",
+  PUBLIC_RPC_URL: "http://127.0.0.1:8545",
+  DATABASE_URL: "file:" + path.join(root, ".local/index.db"),
+};

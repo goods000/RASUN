@@ -1,11 +1,14 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import fs from "node:fs";
 import path from "node:path";
 async function main() {
   const file = path.resolve(
     __dirname,
     "../../",
-    process.env.DEPLOYMENT_FILE || "deployments/local.json",
+    process.env.DEPLOYMENT_FILE ||
+      (network.name === "bscTestnet"
+        ? "deployments/testnet.json"
+        : "deployments/local.json"),
   );
   const c = JSON.parse(fs.readFileSync(file, "utf8"));
   if (Number((await ethers.provider.getNetwork()).chainId) !== c.chainId)

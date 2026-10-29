@@ -138,8 +138,61 @@ test("RPC error shows unavailable state and disables financial actions", async (
     }),
   );
   await page.goto("/");
-  await expect(
-    page.getByText("链上数据暂不可用，请检查服务或稍后重试。"),
-  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("链上数据暂不可用");
   await expect(page.getByTestId("holding-claim")).toBeDisabled();
+});
+
+test("switching chain during gas estimation never forwards an old transaction", async ({
+  page,
+  request,
+}) => {
+  const cfg = await (
+    await request.get("http://127.0.0.1:3000/api/config")
+  ).json();
+  await page.addInitScript(
+    ({ user }) => {
+      let chain = "0x7a69";
+      const listeners: Record<string, Function> = {};
+      (window as any).sentTransactions = 0;
+      (window as any).ethereum = {
+        on(n: string, fn: Function) {
+          listeners[n] = fn;
+        },
+        removeListener(n: string) {
+          delete listeners[n];
+        },
+        async request({ method, params }: any) {
+          if (method === "eth_accounts" || method === "eth_requestAccounts")
+            return [user];
+          if (method === "eth_chainId") return chain;
+          if (method === "eth_sendTransaction")
+            (window as any).sentTransactions++;
+          const response = await fetch("http://127.0.0.1:8545", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method,
+              params: params || [],
+            }),
+          });
+          const result = await response.json();
+          if (result.error) throw Error(result.error.message);
+          if (method === "eth_estimateGas") {
+            chain = "0x61";
+            listeners.chainChanged?.(chain);
+          }
+          return result.result;
+        },
+      };
+    },
+    { user: cfg.demoWallet },
+  );
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("referral-claim")).toBeEnabled();
+  await page.getByTestId("referral-claim").click();
+  await expect(page.getByRole("status")).toContainText("钱包账户或网络已变化");
+  expect(await page.evaluate(() => (window as any).sentTransactions)).toBe(0);
 });

@@ -1,21 +1,21 @@
-
 <script lang="ts">
-export default {
-  onLaunch() {
-    console.log('RASUN DApp 启动')
-  },
-  onShow() {
-    console.log('RASUN DApp 显示')
-  },
-  onHide() {
-    console.log('RASUN DApp 隐藏')
-  }
-}
+export default {};
 </script>
-
 <style>
 page {
-  background-color: #0b1220;
-  color: #ffffff;
+  background: #faf7fc;
+  color: #342344;
+}
+body {
+  margin: 0;
+}
+uni-page-body {
+  min-height: 100vh;
+}
+uni-button {
+  margin: 0;
+}
+uni-button:after {
+  border: 0;
 }
 </style>

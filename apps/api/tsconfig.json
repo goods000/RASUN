@@ -1,1 +1,17 @@
-{"compilerOptions":{"module":"commonjs","target":"ES2022","moduleResolution":"node","outDir":"./dist","baseUrl":"./","experimentalDecorators":true,"emitDecoratorMetadata":true,"esModuleInterop":true,"strict":true,"skipLibCheck":true}}
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["test", "dist", "node_modules", "prisma.config.ts"]
+}

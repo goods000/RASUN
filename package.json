@@ -4,11 +4,27 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev:admin": "pnpm --filter @rasun/admin dev",
-    "dev:dapp": "pnpm --filter @rasun/dapp dev:h5",
-    "dev:api": "pnpm --filter @rasun/api start:dev",
-    "db:setup": "pnpm --filter @rasun/api db:setup",
-    "contract:test": "pnpm --dir contracts test",
-    "contract:compile": "pnpm --dir contracts compile"
+    "dev:admin": "node scripts/workspace.mjs --filter @rasun/admin dev",
+    "dev:dapp": "node scripts/workspace.mjs --filter @rasun/dapp dev:h5",
+    "dev:api": "node scripts/workspace.mjs --filter @rasun/api start:dev",
+    "db:setup": "node scripts/workspace.mjs --filter @rasun/api db:setup",
+    "contract:test": "node scripts/workspace.mjs --dir contracts test",
+    "contract:compile": "node scripts/workspace.mjs --dir contracts compile",
+    "dev:local": "node scripts/dev-local.mjs",
+    "local:deploy": "node scripts/workspace.mjs --dir contracts exec hardhat run scripts/deploy.ts --network localhost",
+    "local:settle": "node scripts/workspace.mjs --dir contracts exec hardhat run scripts/settle.ts --network localhost",
+    "test:wallet": "node --test apps/dapp/test/wallet.test.cjs",
+    "test:api": "node --test --test-concurrency=1 apps/api/test/*.test.cjs",
+    "test:ui": "playwright test",
+    "check:local": "node scripts/check-local.mjs",
+    "verify": "node scripts/verify.mjs",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,vue,css}\" \"contracts/{scripts,test}/**/*.ts\" \"scripts/*.mjs\" \"tests/*.ts\""
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "prettier": "3.6.2"
+  },
+  "engines": {
+    "node": ">=22 <25"
   }
 }

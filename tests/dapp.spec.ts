@@ -1,0 +1,145 @@
+import { test, expect } from "@playwright/test";
+let snapshot: string;
+async function rpc(method: string, params: any[] = []) {
+  const r = await fetch("http://127.0.0.1:8545", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  return (await r.json()).result;
+}
+test.beforeAll(async () => {
+  snapshot = await rpc("evm_snapshot");
+});
+test.afterAll(async () => {
+  if (snapshot) await rpc("evm_revert", [snapshot]);
+});
+test("mobile and desktop show live economics, full translations and empty wallet state", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "让每一份持有" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("minted")).toContainText("2,003,333");
+  await expect(page.getByTestId("holding-claim")).toBeDisabled();
+  await page.getByLabel("语言").selectOption("en");
+  await expect(
+    page.getByRole("heading", { name: "Turn your holdings" }),
+  ).toBeVisible();
+  for (const l of ["zh-TW", "ms", "ja", "ko", "ru", "zh-CN"]) {
+    await page.locator("select").selectOption(l);
+    await expect(page.getByTestId("holding-claim")).toBeVisible();
+  }
+  await page.screenshot({
+    path: "test-results/dapp-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId("holding-claim")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/dapp-mobile.png",
+    fullPage: true,
+  });
+});
+test("wallet rejection is visible and never pretends to connect", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    (window as any).ethereum = {
+      on() {},
+      removeListener() {},
+      async request() {
+        throw Object.assign(Error("Rejected"), { code: 4001 });
+      },
+    };
+  });
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByRole("status")).toContainText("交易失败或已取消");
+  await expect(page.getByTestId("holding-claim")).toBeDisabled();
+});
+test("real local wallet can bind inviter and claim only holding rewards", async ({
+  page,
+}) => {
+  const config = await (
+    await page.request.get("http://127.0.0.1:3000/api/config")
+  ).json();
+  const user = config.demoWallet;
+  await page.addInitScript(
+    ({ user }) => {
+      const handlers: Record<string, Function> = {};
+      (window as any).ethereum = {
+        on(n: string, f: Function) {
+          handlers[n] = f;
+        },
+        removeListener(n: string) {
+          delete handlers[n];
+        },
+        async request({ method, params }: any) {
+          if (method === "eth_requestAccounts" || method === "eth_accounts")
+            return [user];
+          const r = await fetch("http://127.0.0.1:8545", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method,
+              params: params || [],
+            }),
+          });
+          const b = await r.json();
+          if (b.error) throw Error(b.error.message);
+          return b.result;
+        },
+      };
+    },
+    { user },
+  );
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("holding-claim")).toBeEnabled();
+  const before = await (
+    await page.request.get("http://127.0.0.1:3000/api/wallet/" + user)
+  ).json();
+  await page.getByTestId("holding-claim").click();
+  await expect(page.getByRole("status")).toContainText("交易已确认", {
+    timeout: 30000,
+  });
+  const after = await (
+    await page.request.get("http://127.0.0.1:3000/api/wallet/" + user)
+  ).json();
+  expect(after.claimable.holding).toBe("0");
+  expect(after.claimable.referral).toBe(before.claimable.referral);
+  await page.getByRole("button", { name: "推广挖矿", exact: true }).click();
+  await page
+    .getByTestId("inviter-input")
+    .fill("0x0000000000000000000000000000000000000123");
+  await page.getByTestId("bind").click();
+  await expect(page.getByRole("status")).toContainText("交易已确认", {
+    timeout: 30000,
+  });
+});
+
+test("RPC error shows unavailable state and disables financial actions", async ({
+  page,
+}) => {
+  await page.route("**/api/overview", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "RPC unavailable" }),
+    }),
+  );
+  await page.goto("/");
+  await expect(
+    page.getByText("链上数据暂不可用，请检查服务或稍后重试。"),
+  ).toBeVisible();
+  await expect(page.getByTestId("holding-claim")).toBeDisabled();
+});

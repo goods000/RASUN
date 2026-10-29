@@ -15,7 +15,11 @@
     "@nestjs/platform-express": "^10.4.15",
     "@prisma/client": "^6.3.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "ethers": "^6.13.5",
+    "dotenv": "^16.4.7",
+    "@prisma/adapter-libsql": "6.19.3",
+    "@libsql/client": "^0.15.15"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",

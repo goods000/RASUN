@@ -5,7 +5,8 @@
       "style": {
         "navigationBarTitleText": "RASUN",
         "navigationBarBackgroundColor": "#17122e",
-        "navigationBarTextStyle": "white"
+        "navigationBarTextStyle": "white",
+        "navigationStyle": "custom"
       }
     }
   ],

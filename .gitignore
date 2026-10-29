@@ -14,3 +14,11 @@ contracts/cache/
 contracts/typechain-types/
 coverage/
 .DS_Store
+
+deployments/*.json
+.superpowers/
+
+test-results/
+playwright-report/
+
+.local/

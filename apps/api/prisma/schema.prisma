@@ -1,11 +1,33 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "sqlite"; url = env("DATABASE_URL") }
-model User { id Int @id @default(autoincrement()) walletAddress String @unique; createdAt DateTime @default(now()); referrals Referral[] @relation("Inviter") }
-model Referral { id Int @id @default(autoincrement()); inviterId Int; inviteeAddress String @unique; blockNumber String; txHash String @unique; inviter User @relation("Inviter", fields:[inviterId], references:[id]) }
-model TokenTransfer { id Int @id @default(autoincrement()); txHash String; logIndex Int; fromAddress String; toAddress String; amountWei String; blockNumber String; @@unique([txHash,logIndex]) }
-model BalanceSnapshot { id Int @id @default(autoincrement()); walletAddress String; snapshotDay String; balanceWei String; rank Int?; @@unique([walletAddress,snapshotDay]) }
-model RewardSnapshot { id Int @id @default(autoincrement()); walletAddress String; snapshotDay String; rewardType String; amountWei String; merkleRoot String?; @@unique([walletAddress,snapshotDay,rewardType]) }
-model ClaimRecord { id Int @id @default(autoincrement()); walletAddress String; rewardType String; amountWei String; txHash String @unique; blockNumber String }
-model BlockSyncState { id Int @id @default(autoincrement()); key String @unique; lastBlock String }
-model AdminUser { id Int @id @default(autoincrement()); username String @unique; passwordHash String; createdAt DateTime @default(now()) }
-model AuditLog { id Int @id @default(autoincrement()); action String; actor String; details String?; createdAt DateTime @default(now()) }
+generator client {
+  provider = "prisma-client-js"
+  engineType = "client"
+}
+datasource db {
+  provider = "sqlite"
+  url = "file:./dev.db"
+}
+model ChainEvent {
+  id Int @id @default(autoincrement())
+  scope String
+  txHash String
+  logIndex Int
+  blockNumber Int
+  blockHash String
+  contractAddress String
+  name String
+  args String
+  account1 String?
+  account2 String?
+  timestamp Int
+  @@unique([scope, txHash, logIndex])
+  @@index([scope, blockNumber])
+  @@index([scope, account1])
+  @@index([scope, account2])
+}
+model IndexedBlock {
+  id Int @id @default(autoincrement())
+  scope String
+  number Int
+  hash String
+  @@unique([scope, number])
+}

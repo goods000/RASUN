@@ -1,10 +1,13 @@
 {
   "name": "RASUN",
   "appid": "__UNI__RASUNDEMO",
-  "description": "RASUN DApp scaffold",
+  "description": "RASUN on-chain holding and referral mining",
   "versionName": "0.1.0",
   "versionCode": "100",
   "h5": {
     "title": "RASUN"
+  },
+  "uniStatistics": {
+    "enable": false
   }
 }

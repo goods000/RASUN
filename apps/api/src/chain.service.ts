@@ -1,4 +1,8 @@
-import { Injectable, ServiceUnavailableException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { Contract, JsonRpcProvider, formatEther } from "ethers";
 import { deployment, address, jsonSafe, paging } from "./config";
 @Injectable()
@@ -9,6 +13,9 @@ export class ChainService {
   mining: Contract;
   registry: Contract;
   oracle: Contract;
+  quote: Contract;
+  pool: Contract;
+  faucet: Contract;
   constructor() {
     this.provider = new JsonRpcProvider(
       process.env.RPC_URL || "http://127.0.0.1:8545",
@@ -31,6 +38,9 @@ export class ChainService {
     this.mining = make("mining");
     this.registry = make("registry");
     this.oracle = make("oracle");
+    this.quote = make("quote");
+    this.pool = make("pool");
+    this.faucet = make("faucet");
   }
   async ready() {
     if (!this.config)
@@ -43,8 +53,31 @@ export class ChainService {
         this.config.chainId
       )
         throw Error("Chain mismatch");
-      if ((await this.provider.getCode(this.config.addresses.token)) === "0x")
-        throw Error("Missing deployment");
+      const names = this.config.sandbox
+        ? ["token", "registry", "mining", "oracle", "quote", "pool", "faucet"]
+        : ["token"];
+      if (
+        this.config.sandbox &&
+        (![97, 31337].includes(this.config.chainId) ||
+          this.config.mode !== "testnet" ||
+          !Number.isSafeInteger(this.config.epochSeconds) ||
+          this.config.epochSeconds < 1 ||
+          this.config.accelerated !== (this.config.epochSeconds !== 86400))
+      )
+        throw Error("Invalid sandbox metadata");
+      await Promise.all(
+        names.map(async (name) => {
+          if (
+            (await this.provider.getCode(this.config.addresses[name])) === "0x"
+          )
+            throw Error("Missing deployment");
+        }),
+      );
+      if (
+        this.config.sandbox &&
+        Number(await this.token.epochSeconds()) !== this.config.epochSeconds
+      )
+        throw Error("Epoch clock metadata mismatch");
     } catch {
       throw new ServiceUnavailableException(
         "Configured chain or contracts are unavailable",
@@ -71,6 +104,9 @@ export class ChainService {
       network: c.network,
       mode: c.mode,
       testOracle: c.testOracle,
+      sandbox: c.sandbox === true,
+      epochSeconds: c.epochSeconds || 86400,
+      accelerated: c.accelerated === true,
       localIdentity: c.localIdentity || null,
       addresses: c.addresses,
       abis: c.abis,
@@ -134,6 +170,12 @@ export class ChainService {
         totalBurned,
         cap,
         currentDay,
+        currentEpoch: currentDay,
+        epochSeconds: this.config.epochSeconds || 86400,
+        accelerated: this.config.accelerated === true,
+        nextEpochAt:
+          (currentDay + 1n) * BigInt(this.config.epochSeconds || 86400) -
+          28800n,
         nextDay,
         activeDay,
         startDay,
@@ -154,6 +196,49 @@ export class ChainService {
               other: epoch.other,
             }
           : null,
+      };
+    });
+  }
+  async market(value?: string) {
+    if (!this.config?.sandbox)
+      throw new NotFoundException("Sandbox market unavailable");
+    const account = value === undefined ? null : address(value);
+    return this.guard(async () => {
+      const [reserves, currentEpoch, block] = await Promise.all([
+        this.pool.reserves(),
+        this.token.currentDay(),
+        this.provider.getBlock("latest"),
+      ]);
+      if (!block)
+        throw new ServiceUnavailableException("Latest block unavailable");
+      const [
+        quoteBalance,
+        quoteAllowance,
+        tokenAllowance,
+        nativeBalance,
+        nextClaimAt,
+      ] = account
+        ? await Promise.all([
+            this.quote.balanceOf(account),
+            this.quote.allowance(account, this.config.addresses.pool),
+            this.token.allowance(account, this.config.addresses.pool),
+            this.provider.getBalance(account),
+            this.faucet.nextClaimAt(account),
+          ])
+        : [null, null, null, null, null];
+      return {
+        reserves: { token: reserves[0], quote: reserves[1] },
+        quoteBalance,
+        allowances: { quote: quoteAllowance, token: tokenAllowance },
+        nativeBalance,
+        faucet: {
+          nextClaimAt,
+          available: account !== null && nextClaimAt <= BigInt(block.timestamp),
+        },
+        currentEpoch,
+        nextEpochAt:
+          (currentEpoch + 1n) * BigInt(this.config.epochSeconds || 86400) -
+          28800n,
       };
     });
   }

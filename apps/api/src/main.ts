@@ -6,6 +6,11 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 config({ path: path.join(rootDir(), "apps/api/.env") });
 
+// Serving processes must never retain deployment signer credentials, including API dotenv.
+for (const key of Object.keys(process.env)) {
+  if (/PRIVATE_KEY|MNEMONIC|DEPLOYER_KEY/i.test(key)) delete process.env[key];
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix("api");

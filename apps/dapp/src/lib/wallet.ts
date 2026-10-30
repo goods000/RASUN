@@ -108,6 +108,20 @@ export class WalletSession {
           transaction.from?.toLowerCase() !== sender.toLowerCase()
         )
           throw Error("WALLET_CHANGED");
+        // Re-read gas at the send boundary, including after an approval.
+        if (chainId === 97 || localIdentity) {
+          const balance = BigInt(
+            await raw.request({
+              method: "eth_getBalance",
+              params: [sender, "latest"],
+            }),
+          );
+          valid();
+          if (balance === 0n)
+            throw Object.assign(Error("Insufficient funds for gas"), {
+              code: "INSUFFICIENT_FUNDS",
+            });
+        }
         return raw.request({
           method: "eth_sendTransaction",
           params: [{ ...transaction, chainId: "0x" + chainId.toString(16) }],

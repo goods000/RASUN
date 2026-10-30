@@ -28,6 +28,9 @@ class ApiController {
   @Get("overview") overview() {
     return this.chain.overview();
   }
+  @Get("market") market(@Query("wallet") wallet?: string) {
+    return this.chain.market(wallet);
+  }
   @Get("ranking") ranking(
     @Query("page") page?: string,
     @Query("limit") limit?: string,

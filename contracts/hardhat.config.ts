@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
     bscTestnet: {
       url:
         process.env.BSC_TESTNET_RPC_URL ||
-        "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+        "https://bsc-testnet-rpc.publicnode.com",
       chainId: 97,
       accounts: process.env.DEPLOYER_PRIVATE_KEY
         ? [process.env.DEPLOYER_PRIVATE_KEY]

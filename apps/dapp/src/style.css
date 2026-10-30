@@ -1576,3 +1576,41 @@ footer > span {
     padding-bottom: 130px;
   }
 }
+.sandbox-panel {
+  margin: 24px 0;
+  border: 1px solid #b992eb;
+  background: linear-gradient(125deg, #f4edff, #fff1f8);
+}
+.sandbox-panel p {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.sandbox-panel label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 20px 12px 0;
+  font-size: 14px;
+}
+.sandbox-panel input {
+  width: 140px;
+  padding: 12px;
+  border: 1px solid #d6bce9;
+  border-radius: 12px;
+  background: white;
+  font-size: 16px;
+}
+.sandbox-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.sandbox-actions button {
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid #d6bce9;
+  min-height: 44px;
+  font-size: 14px;
+}

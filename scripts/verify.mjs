@@ -4,6 +4,7 @@ for (const args of [
   ["contract:test"],
   ["test:wallet"],
   ["--filter", "@rasun/api", "build"],
+  ["test:testnet-api"],
   ["--filter", "@rasun/admin", "build"],
   ["--filter", "@rasun/dapp", "build:h5"],
 ])

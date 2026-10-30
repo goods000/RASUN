@@ -35,7 +35,7 @@ contract RASUNToken is ERC20, Ownable {
         excluded[miner]=true;excluded[liquidity]=true;excluded[tech]=true;excluded[ops]=true;excluded[dao_]=true;excluded[stabilization_]=true;
         _mint(miner,1_000_000 ether);_mint(liquidity,1_000_000 ether);totalMinted=2_000_000 ether;
     }
-    function currentDay() public view returns(uint256){return (block.timestamp+8 hours)/1 days;}
+    function currentDay() public view virtual returns(uint256){return (block.timestamp+8 hours)/1 days;}
     function configure(address mining_,address oracle_,address[] calldata pools) external onlyOwner {
         require(!frozen && mining==address(0),'LOCKED');require(mining_.code.length>0&&oracle_.code.length>0,'CONTRACT_REQUIRED');
         mining=mining_;oracle=IPriceOracle(oracle_);excluded[mining_]=true;

@@ -168,6 +168,14 @@ onUnmounted(() => {
           ◇ 当前为{{
             config?.mode === "local" ? "本地开发" : "测试网"
           }}环境，使用测试预言机，不代表真实市场价格。管理后台不提供资产转移权限。
+          <span v-if="config?.sandbox">
+            测试池使用无价值 tUSDT；结算轮次为 {{ config.epochSeconds }} 秒。
+            {{
+              config.accelerated
+                ? "发行与收益已加速，仅供测试；下方日编号表示测试轮次。"
+                : "按 UTC+8 每日结算。"
+            }}
+          </span>
         </div>
         <div v-if="error" class="alert" role="alert">{{ error }}</div>
         <section

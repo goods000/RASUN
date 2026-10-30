@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { BrowserProvider, Contract, isAddress, ZeroAddress } from "ethers";
+import {
+  BrowserProvider,
+  Contract,
+  isAddress,
+  ZeroAddress,
+  parseUnits,
+} from "ethers";
 import NativeButton from "../../components/NativeButton";
 import NativeInput from "../../components/NativeInput";
 import { WalletSession } from "../../lib/wallet";
@@ -15,6 +21,33 @@ const tab = ref("overview"),
   wallet = ref<any>(null),
   ranks = ref<any[]>([]),
   events = ref<any[]>([]);
+const market = ref<any>(null),
+  marketError = ref(false),
+  swapAmount = ref("1"),
+  slippage = ref("1"),
+  lastTx = ref("");
+const sandbox = computed(
+  () =>
+    config.value?.sandbox === true &&
+    [97, 31337].includes(config.value.chainId),
+);
+const nativeSymbol = computed(() =>
+  config.value?.chainId === 97 ? "tBNB" : "ETH",
+);
+const noGas = computed(
+  () =>
+    sandbox.value &&
+    (!market.value || BigInt(market.value.nativeBalance || "0") === 0n),
+);
+const canSend = computed(
+  () =>
+    connected.value &&
+    !wrongNetwork.value &&
+    !busy.value &&
+    !error.value &&
+    !!config.value &&
+    (!sandbox.value || (!marketError.value && !!market.value && !noGas.value)),
+);
 const account = ref(""),
   chain = ref(0),
   notice = ref(""),
@@ -33,6 +66,8 @@ const session = new WalletSession((window as any).ethereum || null, () => {
   account.value = session.account;
   chain.value = session.chainId;
   wallet.value = null;
+  market.value = null;
+  lastTx.value = "";
   events.value = [];
   recordPage.value = 1;
   void refresh();
@@ -84,6 +119,21 @@ async function refresh() {
     ]);
     if (request !== refreshId) return;
     config.value = c;
+    if (c.sandbox) {
+      try {
+        const m = await api("market" + (who ? "?wallet=" + who : ""));
+        if (request !== refreshId) return;
+        market.value = m;
+        marketError.value = false;
+      } catch {
+        if (request !== refreshId) return;
+        market.value = null;
+        marketError.value = true;
+      }
+    } else {
+      market.value = null;
+      marketError.value = false;
+    }
     overview.value = o;
     ranks.value = r.items;
     rankTotal.value = r.total;
@@ -109,8 +159,28 @@ async function connect() {
     feedback(e.message === "NO_WALLET" ? "noWallet" : "failed");
   }
 }
-async function transact(kind: "holding" | "referral" | "bind") {
-  if (busy.value || !config.value || error.value) return;
+async function transact(
+  kind:
+    | "holding"
+    | "referral"
+    | "bind"
+    | "historyHolding"
+    | "historyReferral"
+    | "faucet"
+    | "buy"
+    | "sell"
+    | "begin"
+    | "process",
+) {
+  if (!canSend.value) {
+    if (noGas.value) feedback("getGas");
+    return;
+  }
+  if (
+    ["holding", "referral"].includes(kind) &&
+    BigInt(wallet.value?.claimable?.[kind] || "0") <= 0n
+  )
+    return;
   if (
     kind === "bind" &&
     (!isAddress(inviter.value) ||
@@ -138,21 +208,67 @@ async function transact(kind: "holding" | "referral" | "bind") {
     );
     const signer = await provider.getSigner(sender);
     if (generation !== session.version) throw Error("WALLET_CHANGED");
-    const contract = new Contract(
-      config.value.addresses[kind === "bind" ? "registry" : "mining"],
-      config.value.abis[kind === "bind" ? "registry" : "mining"],
-      signer,
-    );
-    const tx =
-      kind === "bind"
-        ? await contract.bind(inviter.value)
-        : await contract.claim(kind === "holding" ? 0 : 1, 365);
+    const currentConfig = config.value;
+    const contractFor = (name: string) =>
+      new Contract(
+        currentConfig.addresses[name],
+        currentConfig.abis[name],
+        signer,
+      );
+    let tx;
+    if (kind === "buy" || kind === "sell") {
+      if (!sandbox.value) throw Error("FAILED");
+      const input = parseUnits(swapAmount.value, 18);
+      const bps = Math.round(Number(slippage.value) * 100);
+      if (input <= 0n || !Number.isFinite(bps) || bps < 10 || bps > 1000)
+        throw Error("FAILED");
+      const pool = contractFor("pool");
+      // A failed quote exits before any approval or swap is sent.
+      const quoted = BigInt(
+        await pool[kind === "buy" ? "quoteBuy" : "quoteSell"](input),
+      );
+      const netQuote = kind === "buy" ? (quoted * 9700n) / 10000n : quoted;
+      const minimum = (netQuote * BigInt(10000 - bps)) / 10000n;
+      if (minimum <= 0n) throw Error("FAILED");
+      const asset = contractFor(kind === "buy" ? "quote" : "token");
+      const spender = currentConfig.addresses.pool;
+      const allowance = BigInt(await asset.allowance(sender, spender));
+      // Replace any old approval with only the amount explicitly requested.
+      if (allowance !== input) {
+        if (allowance > 0n) {
+          const reset = await asset.approve(spender, 0);
+          await reset.wait();
+        }
+        const approval = await asset.approve(spender, input);
+        const approvalReceipt = await approval.wait();
+        if (!approvalReceipt || approvalReceipt.status !== 1)
+          throw Error("FAILED");
+      }
+      if (generation !== session.version) throw Error("WALLET_CHANGED");
+      tx = await pool[kind](input, minimum);
+    } else if (kind === "faucet") {
+      if (!sandbox.value) throw Error("FAILED");
+      tx = await contractFor("faucet").claim();
+    } else if (kind === "begin" || kind === "process") {
+      if (!sandbox.value) throw Error("FAILED");
+      tx =
+        kind === "begin"
+          ? await contractFor("mining").beginDay()
+          : await contractFor("mining").process(128);
+    } else if (kind === "bind")
+      tx = await contractFor("registry").bind(inviter.value);
+    else
+      tx = await contractFor("mining").claim(
+        kind === "holding" || kind === "historyHolding" ? 0 : 1,
+        365,
+      );
     const receipt = await tx.wait();
     if (!receipt || receipt.status !== 1) throw Error("FAILED");
     if (generation !== session.version) {
       feedback("walletChanged");
       return;
     }
+    lastTx.value = tx.hash;
     feedback("success", "success");
     await refresh();
   } catch (e: any) {
@@ -163,6 +279,13 @@ async function transact(kind: "holding" | "referral" | "bind") {
     if (String(e.message).includes("WRONG_RPC")) {
       notice.value = t("wrongRpc") + " " + config.value.rpcUrl;
       noticeType.value = "error";
+      return;
+    }
+    if (
+      e.code === "INSUFFICIENT_FUNDS" ||
+      /insufficient funds/i.test(String(e.message))
+    ) {
+      feedback("getGas");
       return;
     }
     feedback(
@@ -176,6 +299,24 @@ async function transact(kind: "holding" | "referral" | "bind") {
     );
   } finally {
     busy.value = "";
+  }
+}
+async function watchAsset(name: "token" | "quote") {
+  try {
+    session.assertReady(config.value.chainId);
+    await session.raw!.request({
+      method: "wallet_watchAsset",
+      params: {
+        type: "ERC20",
+        options: {
+          address: config.value.addresses[name],
+          symbol: name === "token" ? "RASUN" : "tUSDT",
+          decimals: 18,
+        },
+      } as any,
+    });
+  } catch {
+    feedback("failed");
   }
 }
 async function copy() {
@@ -269,7 +410,7 @@ onUnmounted(() => {
       >
     </view>
     <view class="network-strip"
-      ><span class="live-dot"></span>{{ config?.network || "BSC TESTNET"
+      ><span class="live-dot"></span>{{ config?.network || t("unavailable")
       }}<span class="strip-divider">/</span>{{ t("test") }}</view
     >
     <view v-if="notice" role="status" :class="['notice', noticeType]"
@@ -284,6 +425,125 @@ onUnmounted(() => {
     >
     <view v-if="loading" class="loading-label">{{ t("loading") }}</view>
     <main>
+      <section
+        v-if="sandbox"
+        data-testid="sandbox-panel"
+        class="panel sandbox-panel"
+      >
+        <h2>
+          {{ t("sandbox") }} ·
+          {{ config.chainId === 97 ? "BSC Testnet 97" : "Local fixture 31337" }}
+        </h2>
+        <p v-if="config.accelerated">
+          {{ t("accelerated") }} · {{ config.epochSeconds / 60 }} min / epoch
+        </p>
+        <p>{{ t("testPool") }}</p>
+        <p v-if="marketError" role="alert">{{ t("marketUnavailable") }}</p>
+        <p data-testid="native-balance">
+          {{ t("gasBalance") }}: {{ amount(market?.nativeBalance, 6) }}
+          {{ nativeSymbol }}
+        </p>
+        <p v-if="connected && noGas">
+          {{ t("getGas") }}
+          <a
+            href="https://www.bnbchain.org/en/testnet-faucet"
+            target="_blank"
+            rel="noreferrer"
+            >BNB Chain faucet ↗</a
+          >
+        </p>
+        <p data-testid="quote-balance">
+          tUSDT: {{ amount(market?.quoteBalance) }} · RASUN:
+          {{ amount(wallet?.balance) }}
+        </p>
+        <div class="sandbox-actions">
+          <NativeButton
+            data-testid="faucet-claim"
+            class="primary pink"
+            :disabled="!canSend || !market?.faucet?.available"
+            @click="transact('faucet')"
+            >{{ t("faucet") }}</NativeButton
+          >
+          <NativeButton
+            :disabled="!connected || !!busy"
+            @click="watchAsset('token')"
+            >{{ t("importToken") }} RASUN</NativeButton
+          >
+          <NativeButton
+            :disabled="!connected || !!busy"
+            @click="watchAsset('quote')"
+            >{{ t("importToken") }} tUSDT</NativeButton
+          >
+        </div>
+        <p v-if="market?.faucet?.nextClaimAt">
+          {{ t("faucetNext") }}: {{ date(Number(market.faucet.nextClaimAt)) }}
+        </p>
+        <label
+          >{{ t("swapAmount") }}
+          <NativeInput
+            data-testid="swap-amount"
+            v-model="swapAmount"
+            inputmode="decimal"
+        /></label>
+        <label
+          >{{ t("slippage") }} (%)
+          <NativeInput
+            data-testid="swap-slippage"
+            v-model="slippage"
+            inputmode="decimal"
+        /></label>
+        <p>{{ t("approvalNote") }}</p>
+        <div class="sandbox-actions">
+          <NativeButton
+            data-testid="swap-buy"
+            class="primary"
+            :disabled="!canSend"
+            @click="transact('buy')"
+            >{{ t("buy") }}</NativeButton
+          >
+          <NativeButton
+            data-testid="swap-sell"
+            class="primary pink"
+            :disabled="!canSend"
+            @click="transact('sell')"
+            >{{ t("sell") }}</NativeButton
+          >
+          <NativeButton
+            data-testid="settlement-begin"
+            :disabled="
+              !canSend || settled || BigInt(overview?.activeDay || '0') > 0n
+            "
+            @click="transact('begin')"
+            >{{ t("beginSettlement") }}</NativeButton
+          >
+          <NativeButton
+            data-testid="settlement-process"
+            :disabled="!canSend || BigInt(overview?.activeDay || '0') === 0n"
+            @click="transact('process')"
+            >{{ t("processSettlement") }} (128)</NativeButton
+          >
+        </div>
+        <p>
+          {{ t("settlement") }}: {{ overview?.nextDay }} /
+          {{ overview?.currentDay }} · {{ t("gas") }}
+        </p>
+        <a
+          v-if="config.explorer"
+          :href="config.explorer + '/address/' + config.addresses.token"
+          target="_blank"
+          rel="noreferrer"
+          >RASUN · BscScan ↗</a
+        >
+      </section>
+      <p v-if="lastTx" class="panel">
+        <a
+          v-if="config?.explorer"
+          :href="config.explorer + '/tx/' + lastTx"
+          target="_blank"
+          rel="noreferrer"
+          >{{ t("tx") }} · {{ short(lastTx) }} ↗</a
+        ><span v-else>{{ t("tx") }}: {{ lastTx }}</span>
+      </p>
       <section v-if="tab === 'overview'" class="hero">
         <view class="hero-copy"
           ><view class="eyebrow"><span></span>{{ t("tagline") }}</view>
@@ -394,19 +654,23 @@ onUnmounted(() => {
                 wrongNetwork ||
                 !!busy ||
                 error ||
-                !wallet?.canAdvance?.holding
+                !canSend ||
+                BigInt(wallet?.claimable?.holding || '0') <= 0n
               "
               class="primary"
               @click="transact('holding')"
-              >{{
-                busy === "holding"
-                  ? t("pending")
-                  : wallet?.claimable?.holding === "0" &&
-                      wallet?.canAdvance?.holding
-                    ? t("advance")
-                    : t("claim")
+              >{{ busy === "holding" ? t("pending") : t("claim")
               }}<span v-if="!busy">↗</span></NativeButton
             ></view
+          >
+          <NativeButton
+            v-if="
+              wallet?.canAdvance?.holding &&
+              BigInt(wallet?.claimable?.holding || '0') === 0n
+            "
+            :disabled="!canSend"
+            @click="transact('historyHolding')"
+            >{{ t("advance") }} · {{ t("gas") }}</NativeButton
           >
         </article>
         <article class="mining-card referral">
@@ -444,19 +708,23 @@ onUnmounted(() => {
                 wrongNetwork ||
                 !!busy ||
                 error ||
-                !wallet?.canAdvance?.referral
+                !canSend ||
+                BigInt(wallet?.claimable?.referral || '0') <= 0n
               "
               class="primary pink"
               @click="transact('referral')"
-              >{{
-                busy === "referral"
-                  ? t("pending")
-                  : wallet?.claimable?.referral === "0" &&
-                      wallet?.canAdvance?.referral
-                    ? t("advance")
-                    : t("claim")
+              >{{ busy === "referral" ? t("pending") : t("claim")
               }}<span v-if="!busy">↗</span></NativeButton
             ></view
+          >
+          <NativeButton
+            v-if="
+              wallet?.canAdvance?.referral &&
+              BigInt(wallet?.claimable?.referral || '0') === 0n
+            "
+            :disabled="!canSend"
+            @click="transact('historyReferral')"
+            >{{ t("advance") }} · {{ t("gas") }}</NativeButton
           >
         </article>
       </section>
@@ -490,7 +758,7 @@ onUnmounted(() => {
             /><NativeButton
               data-testid="bind"
               class="primary"
-              :disabled="!connected || wrongNetwork || !!busy || error"
+              :disabled="!canSend"
               @click="transact('bind')"
               >{{ t("bind") }}</NativeButton
             ></view

@@ -2,11 +2,25 @@ import { Module, Controller, Get, Param, Query } from "@nestjs/common";
 import { ChainService } from "./chain.service";
 import { IndexerService } from "./indexer.service";
 @Controller()
-class ApiController {
+export class ApiController {
   constructor(
     private chain: ChainService,
     private index: IndexerService,
   ) {}
+  @Get("live") live() {
+    return {
+      ok: true,
+      service: "RASUN API",
+      runId: process.env.RASUN_DEV_RUN_ID || null,
+      chainId: this.chain.config?.chainId || null,
+      token: this.chain.config?.addresses.token || null,
+      indexStatus: this.index.error
+        ? "error"
+        : this.index.busy
+          ? "syncing"
+          : "ready",
+    };
+  }
   @Get("health") async health() {
     let chain = "ready";
     try {

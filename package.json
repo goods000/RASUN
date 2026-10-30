@@ -20,7 +20,7 @@
     "local:settle": "node scripts/workspace.mjs --dir contracts exec hardhat run scripts/settle.ts --network localhost",
     "test:wallet": "node --test apps/dapp/test/wallet.test.cjs",
     "test:api": "node --test --test-concurrency=1 apps/api/test/*.test.cjs",
-    "test:testnet-api": "node --test apps/api/test/testnet/market.test.cjs",
+    "test:testnet-api": "node --test apps/api/test/testnet/market.test.cjs apps/api/test/testnet/readiness.test.cjs",
     "test:ui": "playwright test",
     "check:local": "node scripts/check-local.mjs",
     "verify": "node scripts/verify.mjs",

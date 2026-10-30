@@ -74,3 +74,10 @@
 - 用户 Windows 系统代理为127.0.0.1:7890，PowerShell RPC chainId=0x61、Node直连超时；配置HTTP(S)_PROXY后Hardhat部署成功，但ethers启动校验仍失败。源码确认ethers默认Node传输不读取代理环境变量。
 - 以本地CONNECT代理复现：原始ethers请求绕过代理，解析测试域名失败；统一RPC请求工厂后通过代理返回chainId。API、launcher和keeper统一使用，loopback直连；根.env中的代理设置按白名单传入API，不传部署私钥。
 - 17项启动/运行/代理测试、API构建通过；本地测试沙盒真实API与浏览器交易回归通过。用户Windows修复后启动待用户实机复验，未将本地代理测试冒充实机结果。
+
+## 2026-10-30：API 就绪误判与公共链索引
+
+- 用户日志显示Nest已在约33秒后成功监听，启动器仍在等待health后退出。原health逐次访问公共RPC，而启动器单请求只等待1.5秒；初次历史索引也同步阻塞HTTP监听。
+- 新增不访问公共RPC的/api/live，严格匹配本次runId、chainId、token后启动UI；链健康仍由原/api/health报告，索引状态单独展示。初次历史索引改为后台执行，数据库连接仍在监听前完成。API进程就绪整体等待上限120秒。
+- 回归先失败后通过：初次索引未完成时模块初始化可返回；真实HTTP服务器在链健康被阻塞时仍能响应live；纯liveness不调用链查询。
+- API构建与8项testnet API单元测试通过，测试沙盒真实API与3项浏览器交易通过；原本地8项API回归通过。Windows实机启动仍待更新后核验。

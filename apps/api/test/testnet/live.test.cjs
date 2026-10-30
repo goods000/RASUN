@@ -11,6 +11,14 @@ test(
       const config = await (await fetch(base + "/config")).json();
       assert.equal(config.sandbox, true);
       assert.equal(config.mode, "testnet");
+      const live = await (await fetch(base + "/live")).json();
+      assert.equal(live.ok, true);
+      assert.equal(live.chainId, config.chainId);
+      assert.equal(
+        live.token.toLowerCase(),
+        config.addresses.token.toLowerCase(),
+      );
+      assert.ok(["ready", "syncing", "error"].includes(live.indexStatus));
       assert.ok([97, 31337].includes(config.chainId));
       assert.equal(
         Number((await provider.getNetwork()).chainId),

@@ -27,7 +27,9 @@ export class IndexerService implements OnModuleInit, OnModuleDestroy {
   }
   async onModuleInit() {
     await this.db.$connect();
-    await this.sync();
+    // Public RPC and historical replay must not prevent the HTTP server from listening.
+    // sync() catches/report errors and busy prevents overlapping background batches.
+    void this.sync();
     this.timer = setInterval(() => void this.sync(), 1000);
   }
   async onModuleDestroy() {

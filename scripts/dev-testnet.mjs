@@ -95,13 +95,17 @@ try {
     });
   }
   await ports.release("api");
-  stage = "API startup and health check";
+  stage = "API process readiness";
   console.log(`Starting API: ${runtime.urls.api}; logs: ${runtime.urls.logs}`);
   start("api", ["--filter", "@rasun/api", "start"]);
   await waitFor(
-    runtime.urls.api + "/api/health",
+    runtime.urls.api + "/api/live",
     (d) =>
-      d.runId === runtime.urls.runId && d.chain === "ready" && !d.index.error,
+      d.ok &&
+      d.runId === runtime.urls.runId &&
+      d.chainId === config.chainId &&
+      d.token?.toLowerCase() === config.addresses.token.toLowerCase(),
+    120000,
   );
   const actual = await (await fetch(runtime.urls.api + "/api/config")).json();
   if (
@@ -130,7 +134,11 @@ try {
   );
   provider.destroy();
 } catch (error) {
-  console.error(diagnostics.deploymentError(error, stage));
+  if (stage === "API process readiness") {
+    console.error(
+      "Local API process readiness failed; inspect api.log. This check does not query BSC RPC.",
+    );
+  } else console.error(diagnostics.deploymentError(error, stage));
   if (runtime) console.error("Startup logs: " + runtime.urls.logs);
   console.error(
     "Testnet startup failed; verify RPC access, deployment metadata/contracts and child logs. No local chain fallback or deployment was attempted.",

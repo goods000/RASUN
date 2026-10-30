@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
+import rpc from "./rpc-provider.cjs";
 import { root, env, command, run, waitFor, stop } from "./process.mjs";
 import { reserveDevPorts } from "./ui-ports.mjs";
 import {
@@ -10,7 +11,6 @@ import {
   PUBLIC_RPC,
 } from "./testnet-runtime.mjs";
 const require = createRequire(path.join(root, "apps/api/package.json"));
-const { JsonRpcProvider } = require("ethers");
 const { parse } = require("dotenv");
 const settings = {
   ...(fs.existsSync(path.join(root, ".env"))
@@ -40,10 +40,9 @@ try {
     settings.DEPLOYMENT_FILE || "deployments/testnet.json",
   );
   const config = JSON.parse(fs.readFileSync(file, "utf8"));
-  provider = new JsonRpcProvider(
+  provider = rpc.createRpcProvider(
     settings.BSC_TESTNET_RPC_URL || PUBLIC_RPC,
-    undefined,
-    { cacheTimeout: -1 },
+    settings,
   );
   await validateTestnet(config, provider, settings.TESTNET_FIXTURE === "1");
   if (config.chainId === 31337)
@@ -59,6 +58,16 @@ try {
     settings,
   );
   Object.assign(env, runtime.environment);
+  for (const name of [
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "no_proxy",
+  ]) {
+    if (settings[name] !== undefined) env[name] = settings[name];
+  }
   // Never copy root dotenv credentials into child environments.
   for (const key of Object.keys(env))
     if (/PRIVATE_KEY|MNEMONIC|DEPLOYER_KEY/i.test(key)) delete env[key];
@@ -113,7 +122,16 @@ try {
     `RASUN ${config.chainId === 97 ? "BSC TESTNET 97" : "LOCAL TESTNET FIXTURE"} ready\nDApp: ${runtime.urls.dapp}\nAdmin: ${runtime.urls.admin}\nAPI: ${runtime.urls.api}\nLogs: ${runtime.urls.logs}`,
   );
   provider.destroy();
-} catch {
+} catch (error) {
+  const { deploymentError } = require("./deployment-error.cjs");
+  console.error(
+    deploymentError(
+      error,
+      runtime
+        ? "testnet services startup"
+        : "testnet RPC and contract validation",
+    ),
+  );
   console.error(
     "Testnet startup failed; verify RPC access, deployment metadata/contracts and child logs. No local chain fallback or deployment was attempted.",
   );

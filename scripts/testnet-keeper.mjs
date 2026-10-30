@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
+import rpc from "./rpc-provider.cjs";
 import { root } from "./process.mjs";
 import { validateTestnet, keeperStep, PUBLIC_RPC } from "./testnet-runtime.mjs";
 const require = createRequire(path.join(root, "apps/api/package.json"));
-const { JsonRpcProvider, Wallet, Contract } = require("ethers");
+const { Wallet, Contract } = require("ethers");
 const { parse } = require("dotenv");
 const settings = {
   ...(fs.existsSync(path.join(root, ".env"))
@@ -30,10 +31,9 @@ try {
       "utf8",
     ),
   );
-  provider = new JsonRpcProvider(
+  provider = rpc.createRpcProvider(
     settings.BSC_TESTNET_RPC_URL || PUBLIC_RPC,
-    undefined,
-    { cacheTimeout: -1 },
+    settings,
   );
   await validateTestnet(config, provider, settings.TESTNET_FIXTURE === "1");
   if (!settings.DEPLOYER_PRIVATE_KEY)

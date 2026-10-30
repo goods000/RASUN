@@ -4,7 +4,8 @@ import {
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { Contract, JsonRpcProvider, formatEther } from "ethers";
-import { deployment, address, jsonSafe, paging } from "./config";
+import { deployment, address, jsonSafe, paging, rootDir } from "./config";
+import path from "node:path";
 @Injectable()
 export class ChainService {
   config: any;
@@ -17,10 +18,11 @@ export class ChainService {
   pool: Contract;
   faucet: Contract;
   constructor() {
-    this.provider = new JsonRpcProvider(
+    const { createRpcProvider } = require(
+      path.join(rootDir(), "scripts/rpc-provider.cjs"),
+    );
+    this.provider = createRpcProvider(
       process.env.RPC_URL || "http://127.0.0.1:8545",
-      undefined,
-      { cacheTimeout: -1 },
     );
     try {
       this.config = deployment();

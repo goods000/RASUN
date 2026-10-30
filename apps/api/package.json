@@ -19,7 +19,8 @@
     "ethers": "^6.13.5",
     "dotenv": "^16.4.7",
     "@prisma/adapter-libsql": "6.19.3",
-    "@libsql/client": "^0.15.15"
+    "@libsql/client": "^0.15.15",
+    "https-proxy-agent": "5.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 test("admin reports real supply and searchable users without write controls", async ({
   page,
 }) => {
-  await page.goto("http://127.0.0.1:5174");
+  await page.goto(process.env.RASUN_ADMIN_URL || "http://127.0.0.1:5174");
   await expect(page.getByTestId("admin-supply")).not.toHaveText("—");
   await page.getByRole("button", { name: "用户与排名", exact: true }).click();
   await expect(
@@ -44,7 +44,7 @@ test("a delayed wallet response cannot overwrite the newer query", async ({
     await route.fulfill({ json: { ...actual, address } });
     if (address === a) completed();
   });
-  await page.goto("http://127.0.0.1:5174");
+  await page.goto(process.env.RASUN_ADMIN_URL || "http://127.0.0.1:5174");
   await page.getByRole("button", { name: "用户与排名", exact: true }).click();
   await page.getByPlaceholder("输入钱包地址查询").fill(a);
   await page.getByRole("button", { name: "查询钱包", exact: true }).click();

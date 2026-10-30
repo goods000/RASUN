@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import {
@@ -10,8 +12,9 @@ import {
   localOverrides,
   root,
 } from "./process.mjs";
-Object.assign(env, localOverrides);
-for (const port of [8545, 3000, 5173, 5174]) await assertFree(port);
+const runId = randomUUID();
+Object.assign(env, localOverrides, { RASUN_DEV_RUN_ID: runId });
+for (const port of [8545, 3000]) await assertFree(port);
 const stack = spawn(
   process.execPath,
   [path.join(root, "scripts/dev-local.mjs")],
@@ -39,6 +42,27 @@ try {
       controller.signal,
     ),
   ]);
+  let urls;
+  const until = Date.now() + 120000;
+  while (Date.now() < until) {
+    if (stack.exitCode !== null || stack.signalCode)
+      throw Error("Local stack stopped before UI readiness; see .local/logs");
+    try {
+      const candidate = JSON.parse(
+        fs.readFileSync(path.join(root, ".local/dev-urls.json"), "utf8"),
+      );
+      if (candidate.runId === runId) {
+        urls = candidate;
+        break;
+      }
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  if (!urls) throw Error("Local UI readiness timed out");
+  Object.assign(env, {
+    RASUN_DAPP_URL: urls.dapp,
+    RASUN_ADMIN_URL: urls.admin,
+  });
   await run(["test:api"]);
   await run(["test:ui"]);
 } catch (e) {

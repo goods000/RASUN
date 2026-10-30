@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { reserveUiPorts } from "./ui-ports.mjs";
 import {
   command,
   run,
@@ -12,11 +14,19 @@ import path from "node:path";
 import net from "node:net";
 Object.assign(env, localOverrides);
 const children = [];
+const runId = process.env.RASUN_DEV_RUN_ID || randomUUID();
+const runtimeFile = path.join(root, ".local/dev-urls.json");
+let uiPorts;
 let closing = false;
 function close(code = 0) {
   if (closing) return;
   closing = true;
   process.exitCode = code;
+  void uiPorts?.release();
+  try {
+    if (JSON.parse(fs.readFileSync(runtimeFile, "utf8")).runId === runId)
+      fs.unlinkSync(runtimeFile);
+  } catch {}
   for (const p of children.reverse()) stop(p);
   setTimeout(() => process.exit(code), 300).unref();
 }
@@ -59,7 +69,7 @@ function start(name, args, childEnv) {
   return child;
 }
 try {
-  for (const port of [8545, 3000, 5173, 5174]) await assertFree(port);
+  for (const port of [8545, 3000]) await assertFree(port);
   await run(["db:setup"]);
   await run(["--filter", "@rasun/api", "build"]);
   start("chain", [
@@ -103,6 +113,7 @@ try {
     "--network",
     "localhost",
   ]);
+  uiPorts = await reserveUiPorts();
   start("api", ["--filter", "@rasun/api", "start"], {
     ...env,
     RPC_URL: "http://127.0.0.1:8545",
@@ -110,6 +121,7 @@ try {
     PORT: "3000",
     CONFIRMATIONS: "0",
     PUBLIC_RPC_URL: "http://127.0.0.1:8545",
+    CORS_ORIGINS: `http://localhost:${uiPorts.dapp},http://127.0.0.1:${uiPorts.dapp},http://localhost:${uiPorts.admin},http://127.0.0.1:${uiPorts.admin}`,
   });
   await waitFor(
     "http://127.0.0.1:3000/api/health",
@@ -125,31 +137,37 @@ try {
     actual.addresses.token !== expected.addresses.token
   )
     throw Error("Local API deployment mismatch");
-  start("dapp", ["dev:dapp"]);
-  start("admin", ["dev:admin"]);
-  for (const port of [5173, 5174]) {
-    const until = Date.now() + 60000;
-    let up = false;
-    while (Date.now() < until) {
-      try {
-        if (
-          (
-            await fetch(`http://127.0.0.1:${port}`, {
-              signal: AbortSignal.timeout(1500),
-            })
-          ).ok
-        ) {
-          up = true;
-          break;
-        }
-      } catch {}
-      await new Promise((r) => setTimeout(r, 300));
-    }
-    if (!up) throw Error("UI failed to start on " + port);
+  const uiEnv = {
+    ...env,
+    RASUN_DAPP_PORT: String(uiPorts.dapp),
+    RASUN_ADMIN_PORT: String(uiPorts.admin),
+    RASUN_UI_STRICT_PORT: "1",
+    RASUN_DEV_RUN_ID: runId,
+  };
+  await uiPorts.release();
+  start("dapp", ["dev:dapp"], uiEnv);
+  start("admin", ["dev:admin"], uiEnv);
+  for (const [application, port] of [
+    ["dapp", uiPorts.dapp],
+    ["admin", uiPorts.admin],
+  ]) {
+    await waitFor(
+      `http://127.0.0.1:${port}/__rasun_dev__`,
+      (data) => data.application === application && data.runId === runId,
+    );
   }
+  const urls = {
+    runId,
+    dapp: `http://localhost:${uiPorts.dapp}`,
+    admin: `http://localhost:${uiPorts.admin}`,
+    api: "http://127.0.0.1:3000",
+    chain: "http://127.0.0.1:8545",
+  };
+  fs.writeFileSync(runtimeFile, JSON.stringify(urls, null, 2));
   console.log(
-    "RASUN local stack ready: DApp port 5173, admin 5174, API 3000, local chain 8545.",
+    `RASUN local stack ready: DApp port ${uiPorts.dapp}, admin ${uiPorts.admin}, API 3000, local chain 8545.`,
   );
+  console.log(`DApp: ${urls.dapp}\nAdmin: ${urls.admin}`);
   console.log(
     "Local-only seeded accounts, test oracle and sample rewards. Logs: .local/logs. Ctrl+C stops the services started by this command.",
   );

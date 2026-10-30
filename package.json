@@ -18,7 +18,8 @@
     "test:ui": "playwright test",
     "check:local": "node scripts/check-local.mjs",
     "verify": "node scripts/verify.mjs",
-    "format": "prettier --write \"apps/*/src/**/*.{ts,vue,css}\" \"contracts/{scripts,test}/**/*.ts\" \"scripts/*.mjs\" \"tests/*.ts\""
+    "format": "prettier --write \"apps/*/src/**/*.{ts,vue,css}\" \"contracts/{scripts,test}/**/*.ts\" \"scripts/*.mjs\" \"tests/*.ts\"",
+    "test:startup": "node --test scripts/test/*.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

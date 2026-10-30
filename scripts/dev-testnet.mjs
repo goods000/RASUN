@@ -134,7 +134,11 @@ try {
   );
   provider.destroy();
 } catch (error) {
-  if (stage === "API process readiness") {
+  if (stage === "database initialization") {
+    console.error(
+      "Local SQLite initialization failed; see the database error above. For SQLITE_BUSY stop the other RASUN dev:testnet/API instance with Ctrl+C. Do not delete the database.",
+    );
+  } else if (stage === "API process readiness") {
     console.error(
       "Local API process readiness failed; inspect api.log. This check does not query BSC RPC.",
     );

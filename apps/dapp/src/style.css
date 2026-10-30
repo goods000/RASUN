@@ -1,4 +1,6 @@
 :root {
+  font-size: 14px;
+  line-height: 1.6;
   font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
   color: #342344;
   background: #faf7fc;
@@ -100,7 +102,7 @@ select:focus-visible,
 .brand-sub {
   display: block;
   letter-spacing: 2px;
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 600;
   margin-top: 3px;
   color: #9e84b0;
@@ -111,7 +113,7 @@ select:focus-visible,
   align-self: stretch;
 }
 .desktop-nav [type="button"] {
-  font-size: 13px;
+  font-size: 14px;
   position: relative;
   color: #887594;
   white-space: nowrap;
@@ -139,7 +141,7 @@ select:focus-visible,
 .top-actions select {
   border: 0;
   color: #82718d;
-  font-size: 12px;
+  font-size: 14px;
   background: transparent;
   max-width: 116px;
   padding: 8px 2px;
@@ -153,7 +155,7 @@ select:focus-visible,
   align-items: center;
   gap: 9px;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   color: #793da6;
   box-shadow: 0 4px 12px #9b60ab08;
@@ -167,7 +169,7 @@ select:focus-visible,
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 10px;
+  font-size: 14px;
   letter-spacing: 1px;
   color: #a08bad;
   padding: 0 2px;
@@ -198,7 +200,7 @@ main {
   padding: 37px 8px 32px;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 14px;
   color: #925ba8;
   letter-spacing: 2.2px;
   display: flex;
@@ -225,7 +227,7 @@ main {
   background-clip: text;
 }
 .hero p {
-  font-size: 13px;
+  font-size: 14px;
   color: #92809f;
   line-height: 1.9;
   max-width: 455px;
@@ -240,7 +242,7 @@ main {
   background: linear-gradient(115deg, #9751c9, #be70cd);
   border-radius: 9px;
   color: #fff;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   padding: 13px 19px;
   display: inline-flex;
@@ -261,7 +263,7 @@ main {
   border-radius: 8px;
 }
 .text-button {
-  font-size: 12px;
+  font-size: 14px;
   color: #8f6aa6;
   display: flex;
   gap: 18px;
@@ -270,7 +272,7 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 9px;
+  font-size: 14px;
   color: #a690b4;
   letter-spacing: 1.3px;
   margin-top: 29px;
@@ -389,7 +391,7 @@ main {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: 14px;
   letter-spacing: 1px;
   color: #9a5bb5;
 }
@@ -400,13 +402,13 @@ main {
   font-size: 23px;
 }
 .label-a span {
-  font-size: 9px;
+  font-size: 14px;
 }
 .label-b {
   right: 0;
   bottom: 65px;
   transform: rotate(5deg);
-  font-size: 8px;
+  font-size: 14px;
 }
 .spark {
   position: absolute;
@@ -445,7 +447,7 @@ main {
   justify-content: space-between;
   align-items: center;
   color: #9985a6;
-  font-size: 11px;
+  font-size: 14px;
   margin-bottom: 12px;
 }
 .stat-symbol {
@@ -458,7 +460,7 @@ main {
   letter-spacing: -0.5px;
 }
 .unit {
-  font-size: 9px;
+  font-size: 14px;
   color: #ad9cb6;
   display: block;
   letter-spacing: 1px;
@@ -471,7 +473,7 @@ main {
   margin: 33px 0 19px;
 }
 .eyebrow.small {
-  font-size: 8px;
+  font-size: 14px;
   letter-spacing: 2px;
   color: #b28ec4;
 }
@@ -484,7 +486,7 @@ h2 {
   margin-top: 7px;
 }
 .section-caption {
-  font-size: 10px;
+  font-size: 14px;
   color: #a48aaf;
   padding-bottom: 3px;
 }
@@ -546,7 +548,7 @@ h2 {
   border: 1px solid #dfc9ec;
   padding: 5px 9px;
   border-radius: 5px;
-  font-size: 8px;
+  font-size: 14px;
   letter-spacing: 1px;
   color: #a575bb;
 }
@@ -559,7 +561,7 @@ h2 {
   letter-spacing: -0.4px;
 }
 .mining-card > p {
-  font-size: 11px;
+  font-size: 14px;
   color: #a18bad;
   margin-top: 8px;
 }
@@ -576,7 +578,7 @@ h2 {
 }
 .card-metrics span,
 .claim-row > view > span {
-  font-size: 10px;
+  font-size: 14px;
   color: #a18dad;
 }
 .card-metrics strong {
@@ -586,7 +588,7 @@ h2 {
 }
 .card-metrics small,
 .claim-row small {
-  font-size: 9px;
+  font-size: 14px;
   color: #b59bbd;
   font-weight: 400;
   margin-left: 3px;
@@ -613,7 +615,7 @@ h2 {
   min-width: 122px;
   max-width: 58%;
   gap: 14px;
-  font-size: 11px;
+  font-size: 14px;
   padding: 11px 15px;
 }
 .primary.pink {
@@ -624,7 +626,7 @@ h2 {
   color: #b86ca5;
 }
 .footnote {
-  font-size: 10px;
+  font-size: 14px;
   color: #b39fbd;
   margin: 14px 1px 29px;
   line-height: 1.8;
@@ -647,7 +649,7 @@ h2 {
   font-size: 19px;
 }
 .panel-title p {
-  font-size: 11px;
+  font-size: 14px;
   color: #a48eaf;
   margin-top: 9px;
   line-height: 1.8;
@@ -656,7 +658,7 @@ h2 {
   display: flex;
   gap: 7px;
   align-items: center;
-  font-size: 8px;
+  font-size: 14px;
   letter-spacing: 1px;
   border: 1px solid #e9d9f1;
   border-radius: 5px;
@@ -674,14 +676,14 @@ h2 {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 14px;
   text-align: left;
   white-space: nowrap;
 }
 th {
   color: #b29dbb;
   font-weight: 400;
-  font-size: 10px;
+  font-size: 14px;
   padding: 13px 15px;
   background: #faf6fc;
   border-top: 1px solid #f0e8f4;
@@ -693,7 +695,7 @@ td {
   color: #8e7b9b;
 }
 .rank-number {
-  font-size: 13px;
+  font-size: 14px;
   color: #b19bbd;
   font-weight: 600;
 }
@@ -709,7 +711,7 @@ td {
   border-radius: 50%;
   background: linear-gradient(140deg, #eadcf6, #f2dceb);
   margin-right: 11px;
-  font-size: 8px;
+  font-size: 14px;
   color: #b286c7;
   vertical-align: middle;
   text-transform: uppercase;
@@ -717,7 +719,7 @@ td {
 .you-dot {
   color: #b47ace;
   margin-left: 8px;
-  font-size: 7px;
+  font-size: 14px;
 }
 .balance-cell {
   color: #6a477d;
@@ -725,12 +727,12 @@ td {
 }
 .balance-cell small {
   font-weight: 400;
-  font-size: 9px;
+  font-size: 14px;
   color: #bba7c5;
   margin-left: 5px;
 }
 .zone {
-  font-size: 9px;
+  font-size: 14px;
   padding: 5px 9px;
   border-radius: 4px;
   background: #f2eaf9;
@@ -753,7 +755,7 @@ td {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  font-size: 9px;
+  font-size: 14px;
   color: #b19bbd;
   margin-top: 20px;
   line-height: 1.8;
@@ -765,7 +767,7 @@ td {
   flex-shrink: 0;
 }
 .pagination [type="button"] {
-  font-size: 10px;
+  font-size: 14px;
 }
 .economics {
   margin: 35px 0 45px;
@@ -783,13 +785,13 @@ td {
   margin-top: 8px;
 }
 .economics p {
-  font-size: 11px;
+  font-size: 14px;
   color: #a58aaf;
   margin-top: 12px;
   line-height: 1.7;
 }
 .settlement-status {
-  font-size: 10px;
+  font-size: 14px;
   color: #a083ae;
   display: flex;
   align-items: center;
@@ -800,7 +802,7 @@ td {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 11px;
+  font-size: 14px;
   color: #9c7cad;
   align-items: center;
 }
@@ -809,7 +811,7 @@ td {
   font-size: 18px;
 }
 .progress-label small {
-  font-size: 8px;
+  font-size: 14px;
   font-weight: 400;
 }
 .progress-track {
@@ -827,7 +829,7 @@ td {
 .progress-bottom {
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
+  font-size: 14px;
   color: #b094bd;
   gap: 10px;
 }
@@ -840,7 +842,7 @@ footer {
   gap: 25px;
   padding: 24px 0 30px;
   color: #b09abc;
-  font-size: 10px;
+  font-size: 14px;
 }
 .footer-brand {
   font-size: 19px;
@@ -854,11 +856,11 @@ footer {
   opacity: 0.75;
 }
 .footer-brand .brand-mark span {
-  font-size: 12px;
+  font-size: 14px;
 }
 footer > span {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 14px;
 }
 .notice {
   position: fixed;
@@ -872,7 +874,7 @@ footer > span {
   padding: 16px 45px 16px 20px;
   border-radius: 12px;
   max-width: 90vw;
-  font-size: 12px;
+  font-size: 14px;
   color: #b6649b;
 }
 .notice [type="button"] {
@@ -896,7 +898,7 @@ footer > span {
   padding: 15px 20px;
   border: 1px solid #e9cadc;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   justify-content: space-between;
   gap: 15px;
@@ -909,13 +911,13 @@ footer > span {
   max-width: 1200px;
   margin: 15px auto;
   color: #ac8ebc;
-  font-size: 12px;
+  font-size: 14px;
 }
 .empty {
   padding: 40px 15px;
   text-align: center;
   color: #b19bbd;
-  font-size: 12px;
+  font-size: 14px;
 }
 .mobile-nav {
   display: none;
@@ -929,7 +931,7 @@ footer > span {
   margin-top: 8px;
 }
 .invite-panel p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
   color: #ab91b7;
   margin-top: 12px;
@@ -939,7 +941,7 @@ footer > span {
   border: 1px dashed #dbbce9;
   border-radius: 8px;
   background: #faf4fd;
-  font-size: 11px;
+  font-size: 14px;
   color: #a77abd;
   overflow-wrap: anywhere;
   line-height: 1.8;
@@ -951,11 +953,11 @@ footer > span {
 .invite-link [type="button"] {
   align-self: flex-start;
   color: #a264bc;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
 }
 .invite-panel label {
-  font-size: 11px;
+  font-size: 14px;
   color: #ae96ba;
 }
 .bind-row {
@@ -975,12 +977,12 @@ footer > span {
   background: #fff;
 }
 .bind-row .primary {
-  font-size: 10px;
+  font-size: 14px;
   white-space: nowrap;
   padding: 13px;
 }
 .address-value {
-  font-size: 12px;
+  font-size: 14px;
   overflow-wrap: anywhere;
   margin-top: 10px;
   color: #855b9d;
@@ -994,13 +996,13 @@ footer > span {
 }
 .directs h3 span {
   color: #b082c1;
-  font-size: 12px;
+  font-size: 14px;
   margin-left: 10px;
 }
 .direct-row {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 14px;
   color: #a88cb5;
   border-bottom: 1px solid #f0e7f5;
   padding: 17px 0;
@@ -1052,20 +1054,20 @@ footer > span {
     gap: 15px;
   }
   .desktop-nav [type="button"] {
-    font-size: 11px;
+    font-size: 14px;
   }
   .brand-sub {
-    font-size: 6px;
+    font-size: 14px;
   }
   .topbar {
     padding: 0 22px;
   }
   .top-actions select {
     max-width: 82px;
-    font-size: 10px;
+    font-size: 14px;
   }
   .wallet-button {
-    font-size: 10px;
+    font-size: 14px;
     padding: 10px 12px;
     gap: 6px;
   }
@@ -1112,7 +1114,7 @@ footer > span {
     border-radius: 10px;
   }
   .brand-sub {
-    font-size: 5px;
+    font-size: 14px;
     letter-spacing: 1.4px;
   }
   .desktop-nav {
@@ -1124,18 +1126,18 @@ footer > span {
   .wallet-button {
     padding: 9px 12px;
     max-width: 155px;
-    font-size: 10px;
+    font-size: 14px;
   }
   .wallet-icon {
     display: none;
   }
   .top-actions select {
     max-width: 80px;
-    font-size: 10px;
+    font-size: 14px;
   }
   .network-strip {
     margin: 17px 22px 0;
-    font-size: 8px;
+    font-size: 14px;
     letter-spacing: 0.3px;
     line-height: 1.7;
   }
@@ -1156,7 +1158,7 @@ footer > span {
     z-index: 5;
   }
   .eyebrow {
-    font-size: 9px;
+    font-size: 14px;
     letter-spacing: 1.8px;
   }
   .hero h1 {
@@ -1165,7 +1167,7 @@ footer > span {
     letter-spacing: -1px;
   }
   .hero p {
-    font-size: 12px;
+    font-size: 14px;
     max-width: 330px;
   }
   .hero-actions {
@@ -1173,11 +1175,11 @@ footer > span {
     gap: 26px;
   }
   .hero .primary {
-    font-size: 11px;
+    font-size: 14px;
     padding: 13px 21px;
   }
   .hero-signature {
-    font-size: 7px;
+    font-size: 14px;
     gap: 9px;
     margin-top: 22px;
   }
@@ -1224,7 +1226,7 @@ footer > span {
   .label-b {
     right: -4px;
     bottom: 28px;
-    font-size: 7px;
+    font-size: 14px;
     padding: 11px;
   }
   .spark-a {
@@ -1256,14 +1258,14 @@ footer > span {
     border: 0;
   }
   .stat-top {
-    font-size: 10px;
+    font-size: 14px;
     margin-bottom: 8px;
   }
   .stat strong {
     font-size: 24px;
   }
   .unit {
-    font-size: 8px;
+    font-size: 14px;
     margin-top: 5px;
   }
   .section-heading {
@@ -1273,11 +1275,11 @@ footer > span {
     font-size: 21px;
   }
   .eyebrow.small {
-    font-size: 7px;
+    font-size: 14px;
     letter-spacing: 1.5px;
   }
   .section-caption {
-    font-size: 8px;
+    font-size: 14px;
   }
   .mining-grid {
     grid-template-columns: 1fr;
@@ -1299,12 +1301,12 @@ footer > span {
     font-size: 22px;
   }
   .claim-row .primary {
-    font-size: 11px;
+    font-size: 14px;
     padding: 12px 17px;
     max-width: 53%;
   }
   .footnote {
-    font-size: 9px;
+    font-size: 14px;
     line-height: 1.9;
     margin: 12px 2px 24px;
   }
@@ -1321,22 +1323,22 @@ footer > span {
     font-size: 18px;
   }
   .panel-title p {
-    font-size: 10px;
+    font-size: 14px;
     max-width: 255px;
   }
   .live-badge {
-    font-size: 6px;
+    font-size: 14px;
     padding: 6px;
   }
   .live-badge .live-dot {
     display: none;
   }
   table {
-    font-size: 10px;
+    font-size: 14px;
     min-width: 360px;
   }
   th {
-    font-size: 9px;
+    font-size: 14px;
     padding: 11px 8px;
   }
   td {
@@ -1346,23 +1348,23 @@ footer > span {
     display: none;
   }
   .balance-cell small {
-    font-size: 7px;
+    font-size: 14px;
   }
   .zone {
-    font-size: 8px;
+    font-size: 14px;
     padding: 5px 6px;
   }
   .pagination {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
-    font-size: 8px;
+    font-size: 14px;
   }
   .pagination > view {
     justify-content: flex-end;
   }
   .pagination [type="button"] {
-    font-size: 9px;
+    font-size: 14px;
   }
   .economics {
     grid-template-columns: 1fr;
@@ -1374,16 +1376,16 @@ footer > span {
     font-size: 21px;
   }
   .economics p {
-    font-size: 10px;
+    font-size: 14px;
   }
   .progress-label strong {
     font-size: 18px;
   }
   .progress-label {
-    font-size: 10px;
+    font-size: 14px;
   }
   .progress-bottom {
-    font-size: 8px;
+    font-size: 14px;
   }
   footer {
     margin: 0 20px;
@@ -1393,7 +1395,7 @@ footer > span {
   }
   footer p {
     width: 100%;
-    font-size: 9px;
+    font-size: 14px;
     order: 3;
   }
   footer > span {
@@ -1420,7 +1422,7 @@ footer > span {
     flex-direction: column;
     gap: 4px;
     align-items: center;
-    font-size: 9px;
+    font-size: 14px;
     color: #b8a2c2;
     max-width: 25%;
     padding: 0 6px;
@@ -1436,11 +1438,11 @@ footer > span {
   .loading-label {
     margin-left: 20px;
     margin-right: 20px;
-    font-size: 10px;
+    font-size: 14px;
   }
   .notice {
     top: 82px;
-    font-size: 11px;
+    font-size: 14px;
     width: max-content;
     max-width: calc(100% - 32px);
   }
@@ -1461,18 +1463,116 @@ footer > span {
   .bind-row [type="text"] {
     flex: auto;
     width: 100%;
-    font-size: 11px;
+    font-size: 14px;
   }
   .bind-row [type="button"] {
     align-self: flex-start;
   }
   .invite-panel p {
-    font-size: 11px;
+    font-size: 14px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;
     transition: none !important;
+  }
+}
+
+/* A readable 14px floor also applies to tablet and mobile secondary text. */
+.brand-sub {
+  display: none;
+}
+.hero-signature,
+.network-strip {
+  flex-wrap: wrap;
+}
+.network-strip {
+  line-height: 1.7;
+}
+.stat-top,
+.card-metrics span,
+.claim-row > view > span,
+.panel-title p {
+  line-height: 1.6;
+}
+.art-label {
+  letter-spacing: 0.4px;
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .topbar {
+    flex-wrap: wrap;
+    padding-top: 16px;
+    padding-bottom: 12px;
+  }
+  .desktop-nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .desktop-nav [type="button"].active:after {
+    bottom: 0;
+  }
+}
+@media (max-width: 760px) {
+  .topbar {
+    padding: 14px 20px;
+  }
+  .top-actions {
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .top-actions select {
+    width: 96px;
+    max-width: 96px;
+    min-height: 40px;
+  }
+  .wallet-button {
+    white-space: normal;
+    min-height: 40px;
+    text-align: center;
+  }
+  .hero-signature {
+    letter-spacing: 0.5px;
+    gap: 8px;
+  }
+  .art-label {
+    display: none;
+  }
+  .section-heading {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .claim-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .claim-row .primary {
+    max-width: none;
+    width: 100%;
+    min-height: 44px;
+  }
+  .panel-title {
+    flex-wrap: wrap;
+  }
+  .progress-label {
+    flex-wrap: wrap;
+  }
+  .progress-bottom {
+    flex-wrap: wrap;
+  }
+  .mobile-nav [type="button"] {
+    min-width: 0;
+    flex: 1;
+    line-height: 1.4;
+    padding: 2px 3px;
+    overflow-wrap: anywhere;
+  }
+  footer {
+    padding-bottom: 130px;
   }
 }

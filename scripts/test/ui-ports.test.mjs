@@ -132,3 +132,69 @@ test("concurrent local runs use different deployments and databases with matchin
   assert.equal(a.environment.PORT, "3001");
   assert.equal(a.environment.DEPLOYMENT_FILE, a.urls.deployment);
 });
+
+test("an IPv6-only default probe cannot hide an occupied IPv4 loopback port", async (t) => {
+  const occupied = await listener("127.0.0.1");
+  const port = occupied.address().port;
+  let held;
+  const listen = net.Server.prototype.listen;
+  t.mock.method(net.Server.prototype, "listen", function (options, ...args) {
+    if (
+      typeof options === "object" &&
+      options.port &&
+      options.host === undefined
+    )
+      return listen.call(
+        this,
+        { ...options, host: "::1", ipv6Only: true },
+        ...args,
+      );
+    return listen.call(this, options, ...args);
+  });
+  try {
+    held = await reserveUiPorts(port, port);
+    assert.notEqual(held.dapp, port, "the real IPv4 listener must be detected");
+    assert.ok(occupied.listening);
+  } finally {
+    await held?.release();
+    await close(occupied);
+  }
+});
+test("a real bind collision after reservation release retries another port", async () => {
+  const { retryPort } = await import("../ui-ports.mjs");
+  assert.equal(typeof retryPort, "function");
+  const occupied = await listener("127.0.0.1");
+  const initial = occupied.address().port;
+  let started;
+  try {
+    const result = await retryPort(initial, async (port) => {
+      const server = net.createServer();
+      await new Promise((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(port, "127.0.0.1", resolve);
+      });
+      return server;
+    });
+    started = result.value;
+    assert.notEqual(result.port, initial);
+    assert.ok(started.listening);
+    assert.ok(occupied.listening);
+  } finally {
+    if (started) await close(started);
+    await close(occupied);
+  }
+});
+test("non-port startup failures are not retried", async () => {
+  const { retryPort } = await import("../ui-ports.mjs");
+  assert.equal(typeof retryPort, "function");
+  let calls = 0;
+  await assert.rejects(
+    () =>
+      retryPort(5000, async () => {
+        calls++;
+        throw Object.assign(Error("missing executable"), { code: "ENOENT" });
+      }),
+    { code: "ENOENT" },
+  );
+  assert.equal(calls, 1);
+});

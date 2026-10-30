@@ -1,5 +1,30 @@
 import net from "node:net";
 
+async function listening(host, port) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      socket.destroy();
+      resolve(value);
+    };
+    socket.setTimeout(250, () => finish(true));
+    socket.once("connect", () => finish(true));
+    socket.once("error", (error) =>
+      finish(
+        ![
+          "ECONNREFUSED",
+          "EAFNOSUPPORT",
+          "EADDRNOTAVAIL",
+          "ENETUNREACH",
+        ].includes(error.code),
+      ),
+    );
+  });
+}
+
 export async function reserveDevPorts(
   preferred = { chain: 8545, api: 3000, dapp: 5173, admin: 5174 },
 ) {
@@ -22,11 +47,17 @@ export async function reserveDevPorts(
         throw Error("Invalid development port");
       let found = false;
       for (let port = start; port <= Math.min(start + 127, 65535); port++) {
+        // Probe both loopback families: Windows may bind an IPv6-only default socket.
+        if (
+          (await listening("127.0.0.1", port)) ||
+          (await listening("::1", port))
+        )
+          continue;
         const server = net.createServer();
         try {
           await new Promise((resolve, reject) => {
             server.once("error", reject);
-            server.listen({ port, exclusive: true }, resolve);
+            server.listen({ port, host: "0.0.0.0", exclusive: true }, resolve);
           });
           held.set(name, server);
           server.unref();
@@ -47,6 +78,30 @@ export async function reserveDevPorts(
 }
 export function reserveUiPorts(dapp = 5173, admin = 5174) {
   return reserveDevPorts({ dapp, admin });
+}
+
+/** A port can be stolen after releasing a reservation; retry real bind failures only. */
+export async function retryPort(
+  initial,
+  start,
+  { attempts = 8, onRetry = () => {} } = {},
+) {
+  let port = initial;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      return { port, value: await start(port) };
+    } catch (error) {
+      if (
+        !["EADDRINUSE", "EACCES"].includes(error.code) ||
+        attempt === attempts - 1
+      )
+        throw error;
+      const reservation = await reserveDevPorts({ retry: port + 1 });
+      port = reservation.retry;
+      await reservation.release();
+      onRetry(port, error);
+    }
+  }
 }
 
 /** Dev-only middleware lets the launcher distinguish its child from an old UI. */

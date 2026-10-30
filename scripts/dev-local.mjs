@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { reserveDevPorts } from "./ui-ports.mjs";
+import { reserveDevPorts, retryPort } from "./ui-ports.mjs";
 import { localRuntime } from "./local-runtime.mjs";
 import { command, run, waitFor, stop, root, env } from "./process.mjs";
 import fs from "node:fs";
@@ -24,7 +24,7 @@ function close(code = 0) {
 }
 process.on("SIGINT", () => close());
 process.on("SIGTERM", () => close());
-function start(name, args) {
+function start(name, args, allowStartupFailure = false) {
   if (closing) throw Error("Startup interrupted");
   const dir = runtime.urls.logs;
   fs.mkdirSync(dir, { recursive: true });
@@ -35,16 +35,20 @@ function start(name, args) {
     stdio: ["ignore", fd, fd],
   });
   fs.closeSync(fd);
+  child.rasunStarting = allowStartupFailure;
   children.push(child);
   child.on("exit", (code) => {
-    if (!closing) {
+    if (!closing && !child.rasunStarting) {
       console.error(`${name} stopped (${code}). See ${file}`);
       close(1);
     }
   });
   child.on("error", (error) => {
-    console.error(error.message);
-    close(1);
+    child.rasunError = error;
+    if (!child.rasunStarting) {
+      console.error(error.message);
+      close(1);
+    }
   });
   return child;
 }
@@ -55,52 +59,84 @@ try {
   await run(["db:setup"]);
   await run(["--filter", "@rasun/api", "build"]);
   await ports.release("chain");
-  const chain = start("chain", [
-    "--dir",
-    "contracts",
-    "exec",
-    "hardhat",
-    "node",
-    "--hostname",
-    "127.0.0.1",
-    "--port",
-    String(ports.chain),
-  ]);
-  const until = Date.now() + 60000;
-  let ready = false;
-  while (!closing && Date.now() < until) {
-    // Only probe after our own child reports a successful bind.
-    const log = fs.readFileSync(
-      path.join(runtime.urls.logs, "chain.log"),
-      "utf8",
-    );
-    if (log.includes(`JSON-RPC server at http://127.0.0.1:${ports.chain}`)) {
-      try {
-        const r = await fetch(runtime.urls.chain, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: 1,
-            method: "eth_chainId",
-            params: [],
-          }),
-          signal: AbortSignal.timeout(1500),
-        });
-        if ((await r.json()).result === "0x7a69") {
-          ready = true;
-          break;
+  await retryPort(
+    ports.chain,
+    async (port) => {
+      ports.chain = port;
+      runtime = localRuntime(runId, ports);
+      Object.assign(env, runtime.environment);
+      const file = path.join(runtime.urls.logs, "chain.log");
+      if (fs.existsSync(file))
+        fs.copyFileSync(
+          file,
+          path.join(runtime.urls.logs, `chain-before-${port}.log`),
+        );
+      const chain = start(
+        "chain",
+        [
+          "--dir",
+          "contracts",
+          "exec",
+          "hardhat",
+          "node",
+          "--hostname",
+          "127.0.0.1",
+          "--port",
+          String(port),
+        ],
+        true,
+      );
+      const until = Date.now() + 60000;
+      let ready = false;
+      while (!closing && Date.now() < until) {
+        const log = fs.readFileSync(file, "utf8");
+        if (log.includes(`JSON-RPC server at http://127.0.0.1:${port}`)) {
+          try {
+            const response = await fetch(runtime.urls.chain, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "eth_chainId",
+                params: [],
+              }),
+              signal: AbortSignal.timeout(1500),
+            });
+            if ((await response.json()).result === "0x7a69") {
+              ready = true;
+              break;
+            }
+          } catch {}
         }
-      } catch {}
-    }
-    if (chain.exitCode !== null) break;
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  }
-  if (!ready)
-    throw Error(
-      "Local chain failed to start; see " +
-        path.join(runtime.urls.logs, "chain.log"),
-    );
+        if (chain.exitCode !== null || chain.signalCode || chain.rasunError)
+          break;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      if (
+        !ready ||
+        chain.exitCode !== null ||
+        chain.signalCode ||
+        chain.rasunError
+      ) {
+        const log = fs.readFileSync(file, "utf8");
+        const error =
+          chain.rasunError || Error("Local chain failed to start; see " + file);
+        if (/EADDRINUSE|address already in use/i.test(log))
+          error.code = "EADDRINUSE";
+        else if (/EACCES/i.test(log)) error.code = "EACCES";
+        if (!error.code) stop(chain);
+        throw error;
+      }
+      chain.rasunStarting = false;
+    },
+    {
+      onRetry: (port) =>
+        console.log(
+          "Local chain port unavailable; automatically retrying " + port,
+        ),
+    },
+  );
   env.RASUN_BOOTSTRAP_DEPLOY = runId;
   try {
     await run([

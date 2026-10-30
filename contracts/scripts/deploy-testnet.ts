@@ -1,7 +1,10 @@
 import { ethers, artifacts, network } from "hardhat";
 import fs from "node:fs";
 import path from "node:path";
+const { deploymentError } = require("../../scripts/deployment-error.cjs");
+let stage = "RPC chain check";
 async function main() {
+  console.log("Deployment stage: " + stage);
   const chainId = Number((await ethers.provider.getNetwork()).chainId);
   const fixture =
     process.env.RASUN_TESTNET_FIXTURE === "1" &&
@@ -38,9 +41,12 @@ async function main() {
       "Deployment file already exists; use the existing deployment or select a new DEPLOYMENT_FILE to prevent accidental replacement",
     );
   }
+  stage = "deployment wallet and tBNB balance";
+  console.log("Deployment stage: " + stage);
   const [owner] = await ethers.getSigners();
   if (!owner) throw Error("No deployment signer configured");
   const ownerAddress = await owner.getAddress();
+  console.log("Deployment wallet (public): " + ownerAddress);
   if (
     (await ethers.provider.getBalance(ownerAddress)) < ethers.parseEther("0.02")
   )
@@ -71,6 +77,8 @@ async function main() {
       "Sandbox seeding requires MINER_ADDRESS and LIQUIDITY_ADDRESS to equal deployer; external allocations require a separately reviewed signed funding workflow",
     );
   async function deploy(name: string, args: any[] = []): Promise<any> {
+    stage = "deploy " + name;
+    console.log("Deployment stage: " + stage);
     const contract = await ethers.deployContract(name, args);
     await contract.waitForDeployment();
     await contract.deploymentTransaction()!.wait();
@@ -100,12 +108,16 @@ async function main() {
     await registry.getAddress(),
     await token.currentDay(),
   ]);
+  stage = "seed sandbox pool and faucet";
+  console.log("Deployment stage: " + stage);
   await (await token.excludeFaucet(faucet)).wait();
   await (await token.transfer(pool, ethers.parseEther("1000000"))).wait();
   await (await quote.mint(pool, ethers.parseEther("500000"))).wait();
   await (await token.transfer(faucet, ethers.parseEther("100000"))).wait();
   await (await quote.transferOwnership(faucet)).wait();
   await (await oracle.transferOwnership(pool)).wait();
+  stage = "configure and freeze token";
+  console.log("Deployment stage: " + stage);
   await (
     await token.configure(mining, oracle, [await pool.getAddress()])
   ).wait();
@@ -172,7 +184,7 @@ main().catch((error) => {
   console.error(
     safePrefixes.some((prefix) => message.startsWith(prefix))
       ? message
-      : "Deployment failed. Check RPC availability, signer configuration and transaction status locally. Provider details suppressed to protect credentials.",
+      : deploymentError(error, stage),
   );
   process.exitCode = 1;
 });

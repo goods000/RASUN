@@ -6,6 +6,11 @@ export default defineConfig({
   server: {
     port: Number(process.env.RASUN_ADMIN_PORT || 5174),
     strictPort: process.env.RASUN_UI_STRICT_PORT === "1",
-    proxy: { "/api": { target: "http://127.0.0.1:3000", changeOrigin: true } },
+    proxy: {
+      "/api": {
+        target: process.env.RASUN_API_URL || "http://127.0.0.1:3000",
+        changeOrigin: true,
+      },
+    },
   },
 });

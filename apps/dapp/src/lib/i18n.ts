@@ -529,6 +529,17 @@ export const messages: Record<string, Record<string, string>> = {
     language: "Язык",
   },
 };
+const rpcMessages: Record<string, string> = {
+  "zh-CN": "钱包连接的是另一条本地链。请在钱包网络设置中更新 RPC 地址：",
+  "zh-TW": "錢包連接的是另一條本地鏈。請在錢包網路設定中更新 RPC 位址：",
+  en: "Your wallet is connected to another local chain. Update its network RPC URL:",
+  ms: "Dompet disambungkan ke rantai tempatan lain. Kemas kini URL RPC rangkaian:",
+  ja: "別のローカルチェーンに接続されています。ウォレットのRPC URLを更新してください：",
+  ko: "다른 로컬 체인에 연결되어 있습니다. 지갑 네트워크의 RPC URL을 변경하세요:",
+  ru: "Кошелёк подключён к другой локальной сети. Обновите URL RPC в настройках:",
+};
+for (const [locale, message] of Object.entries(rpcMessages))
+  messages[locale].wrongRpc = message;
 export const languages = [
   { code: "zh-CN", label: "简体中文" },
   { code: "zh-TW", label: "繁體中文" },

@@ -11,9 +11,13 @@ async function waitFor(check) {
 }
 test("rolls orphaned events back and replays the replacement branch", async () => {
   const cfg = await (await fetch(base + "/config")).json();
-  const rpc = new JsonRpcProvider("http://127.0.0.1:8545", undefined, {
-    cacheTimeout: -1,
-  });
+  const rpc = new JsonRpcProvider(
+    process.env.TEST_RPC_URL || "http://127.0.0.1:8545",
+    undefined,
+    {
+      cacheTimeout: -1,
+    },
+  );
   const signer = await rpc.getSigner(1);
   const token = new Contract(cfg.addresses.token, cfg.abis.token, signer);
   const snapshot = await rpc.send("evm_snapshot", []);

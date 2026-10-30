@@ -126,8 +126,15 @@ async function transact(kind: "holding" | "referral" | "bind") {
   feedback("pending", "pending");
   try {
     session.assertReady(config.value.chainId);
+    await session.assertLocalRpc(config.value.localIdentity);
+    if (generation !== session.version) throw Error("WALLET_CHANGED");
     const provider = new BrowserProvider(
-      session.guardedProvider(config.value.chainId, generation, sender),
+      session.guardedProvider(
+        config.value.chainId,
+        generation,
+        sender,
+        config.value.localIdentity,
+      ),
     );
     const signer = await provider.getSigner(sender);
     if (generation !== session.version) throw Error("WALLET_CHANGED");
@@ -151,6 +158,11 @@ async function transact(kind: "holding" | "referral" | "bind") {
   } catch (e: any) {
     if (generation !== session.version) {
       feedback("walletChanged");
+      return;
+    }
+    if (String(e.message).includes("WRONG_RPC")) {
+      notice.value = t("wrongRpc") + " " + config.value.rpcUrl;
+      noticeType.value = "error";
       return;
     }
     feedback(

@@ -81,12 +81,3 @@ export async function assertFree(port) {
     s.listen(port, "127.0.0.1", () => s.close(resolve));
   });
 }
-
-export const localOverrides = {
-  RPC_URL: "http://127.0.0.1:8545",
-  DEPLOYMENT_FILE: "deployments/local.json",
-  PORT: "3000",
-  CONFIRMATIONS: "0",
-  PUBLIC_RPC_URL: "http://127.0.0.1:8545",
-  DATABASE_URL: "file:" + path.join(root, ".local/index.db"),
-};

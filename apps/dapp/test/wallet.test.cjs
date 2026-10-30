@@ -142,3 +142,36 @@ test("transaction boundary pins chainId and invalidates changed generations", as
   );
   s.dispose();
 });
+
+test("same chainId on an old local RPC cannot receive transactions for the new local run", async () => {
+  const p = provider(),
+    user = "0x1111111111111111111111111111111111111111";
+  let sent = 0;
+  p.request = async ({ method }) => {
+    if (method === "eth_accounts" || method === "eth_requestAccounts")
+      return [user];
+    if (method === "eth_chainId") return "0x7a69";
+    if (method === "eth_getBlockByNumber")
+      return { hash: "0x" + "11".repeat(32) };
+    if (method === "eth_sendTransaction") {
+      sent++;
+      return "hash";
+    }
+  };
+  const s = new WalletSession(p);
+  await s.connect();
+  const guarded = s.guardedProvider(31337, s.version, user, {
+    number: 1,
+    hash: "0x" + "22".repeat(32),
+  });
+  await assert.rejects(
+    () =>
+      guarded.request({
+        method: "eth_sendTransaction",
+        params: [{ from: user, to: user }],
+      }),
+    /WRONG_RPC/,
+  );
+  assert.equal(sent, 0);
+  s.dispose();
+});

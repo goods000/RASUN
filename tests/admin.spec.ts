@@ -1,3 +1,5 @@
+const apiBase = process.env.TEST_API_URL || "http://127.0.0.1:3000/api";
+const rpcUrl = process.env.TEST_RPC_URL || "http://127.0.0.1:8545";
 import { test, expect } from "@playwright/test";
 test("admin reports real supply and searchable users without write controls", async ({
   page,
@@ -27,11 +29,9 @@ test("a delayed wallet response cannot overwrite the newer query", async ({
   page,
   request,
 }) => {
-  const cfg = await (
-    await request.get("http://127.0.0.1:3000/api/config")
-  ).json();
+  const cfg = await (await request.get(apiBase + "/config")).json();
   const actual = await (
-    await request.get("http://127.0.0.1:3000/api/wallet/" + cfg.demoWallet)
+    await request.get(apiBase + "/wallet/" + cfg.demoWallet)
   ).json();
   const a = "0x1111111111111111111111111111111111111111",
     b = "0x2222222222222222222222222222222222222222";

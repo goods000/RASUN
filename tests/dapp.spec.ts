@@ -1,7 +1,9 @@
+const apiBase = process.env.TEST_API_URL || "http://127.0.0.1:3000/api";
+const rpcUrl = process.env.TEST_RPC_URL || "http://127.0.0.1:8545";
 import { test, expect } from "@playwright/test";
 let snapshot: string;
 async function rpc(method: string, params: any[] = []) {
-  const r = await fetch("http://127.0.0.1:8545", {
+  const r = await fetch(rpcUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
@@ -67,12 +69,10 @@ test("wallet rejection is visible and never pretends to connect", async ({
 test("real local wallet can bind inviter and claim only holding rewards", async ({
   page,
 }) => {
-  const config = await (
-    await page.request.get("http://127.0.0.1:3000/api/config")
-  ).json();
+  const config = await (await page.request.get(apiBase + "/config")).json();
   const user = config.demoWallet;
   await page.addInitScript(
-    ({ user }) => {
+    ({ user, rpcUrl }) => {
       const handlers: Record<string, Function> = {};
       (window as any).ethereum = {
         on(n: string, f: Function) {
@@ -84,7 +84,7 @@ test("real local wallet can bind inviter and claim only holding rewards", async 
         async request({ method, params }: any) {
           if (method === "eth_requestAccounts" || method === "eth_accounts")
             return [user];
-          const r = await fetch("http://127.0.0.1:8545", {
+          const r = await fetch(rpcUrl, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
@@ -100,20 +100,20 @@ test("real local wallet can bind inviter and claim only holding rewards", async 
         },
       };
     },
-    { user },
+    { user, rpcUrl },
   );
   await page.goto("/");
   await page.getByTestId("connect").click();
   await expect(page.getByTestId("holding-claim")).toBeEnabled();
   const before = await (
-    await page.request.get("http://127.0.0.1:3000/api/wallet/" + user)
+    await page.request.get(apiBase + "/wallet/" + user)
   ).json();
   await page.getByTestId("holding-claim").click();
   await expect(page.getByRole("status")).toContainText("交易已确认", {
     timeout: 30000,
   });
   const after = await (
-    await page.request.get("http://127.0.0.1:3000/api/wallet/" + user)
+    await page.request.get(apiBase + "/wallet/" + user)
   ).json();
   expect(after.claimable.holding).toBe("0");
   expect(after.claimable.referral).toBe(before.claimable.referral);
@@ -146,11 +146,9 @@ test("switching chain during gas estimation never forwards an old transaction", 
   page,
   request,
 }) => {
-  const cfg = await (
-    await request.get("http://127.0.0.1:3000/api/config")
-  ).json();
+  const cfg = await (await request.get(apiBase + "/config")).json();
   await page.addInitScript(
-    ({ user }) => {
+    ({ user, rpcUrl }) => {
       let chain = "0x7a69";
       const listeners: Record<string, Function> = {};
       (window as any).sentTransactions = 0;
@@ -167,7 +165,7 @@ test("switching chain during gas estimation never forwards an old transaction", 
           if (method === "eth_chainId") return chain;
           if (method === "eth_sendTransaction")
             (window as any).sentTransactions++;
-          const response = await fetch("http://127.0.0.1:8545", {
+          const response = await fetch(rpcUrl, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
@@ -187,12 +185,62 @@ test("switching chain during gas estimation never forwards an old transaction", 
         },
       };
     },
-    { user: cfg.demoWallet },
+    { user: cfg.demoWallet, rpcUrl },
   );
   await page.goto("/");
   await page.getByTestId("connect").click();
   await expect(page.getByTestId("referral-claim")).toBeEnabled();
   await page.getByTestId("referral-claim").click();
   await expect(page.getByRole("status")).toContainText("钱包账户或网络已变化");
+  expect(await page.evaluate(() => (window as any).sentTransactions)).toBe(0);
+});
+
+test("a wallet on an older local RPC gets the current RPC address without sending a transaction", async ({
+  page,
+  request,
+}) => {
+  const cfg = await (await request.get(apiBase + "/config")).json();
+  await page.addInitScript(
+    ({ user, rpcUrl, number }) => {
+      (window as any).sentTransactions = 0;
+      (window as any).ethereum = {
+        on() {},
+        removeListener() {},
+        async request({ method, params }: any) {
+          if (method === "eth_requestAccounts" || method === "eth_accounts")
+            return [user];
+          if (method === "eth_sendTransaction")
+            (window as any).sentTransactions++;
+          const response = await fetch(rpcUrl, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method,
+              params: params || [],
+            }),
+          });
+          const data = await response.json();
+          if (data.error) throw Error(data.error.message);
+          if (
+            method === "eth_getBlockByNumber" &&
+            params[0] === "0x" + number.toString(16)
+          )
+            return { ...data.result, hash: "0x" + "00".repeat(32) };
+          return data.result;
+        },
+      };
+    },
+    { user: cfg.demoWallet, rpcUrl, number: cfg.localIdentity.number },
+  );
+  await page.goto("/");
+  await page.getByTestId("connect").click();
+  await expect(page.getByTestId("referral-claim")).toBeEnabled();
+  await page.getByTestId("referral-claim").click();
+  await expect(page.getByRole("status")).toContainText(
+    "钱包连接的是另一条本地链",
+  );
+  await expect(page.getByRole("status")).toContainText(cfg.rpcUrl);
   expect(await page.evaluate(() => (window as any).sentTransactions)).toBe(0);
 });

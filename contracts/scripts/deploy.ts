@@ -2,12 +2,45 @@ import { ethers, artifacts, network } from "hardhat";
 import fs from "node:fs";
 import path from "node:path";
 async function main() {
+  let active: any = {};
+  try {
+    active = JSON.parse(
+      fs.readFileSync(
+        path.resolve(__dirname, "../../.local/dev-urls.json"),
+        "utf8",
+      ),
+    );
+  } catch {}
+  const bootstrap =
+    process.env.RASUN_BOOTSTRAP_DEPLOY &&
+    process.env.RASUN_BOOTSTRAP_DEPLOY === process.env.RASUN_DEV_RUN_ID;
+  if (network.name === "localhost" && !bootstrap) {
+    if (!process.env.RASUN_LOCAL_RPC_URL || !process.env.DEPLOYMENT_FILE)
+      throw Error(
+        "Use pnpm dev:local for a fresh stack. Manual deployment requires explicit RASUN_LOCAL_RPC_URL and DEPLOYMENT_FILE.",
+      );
+    if (active.chain === process.env.RASUN_LOCAL_RPC_URL)
+      throw Error(
+        "Do not redeploy into an active managed stack; restart with pnpm dev:local.",
+      );
+  }
   const chain = Number((await ethers.provider.getNetwork()).chainId);
   if (chain !== 31337 && chain !== 97)
     throw Error("Only local chain and BSC testnet deployments are supported");
+  const local = chain === 31337;
+  const file = path.resolve(
+    __dirname,
+    "../../",
+    process.env.DEPLOYMENT_FILE ||
+      (local ? "deployments/local.json" : "deployments/testnet.json"),
+  );
+  if (
+    fs.existsSync(file) &&
+    JSON.parse(fs.readFileSync(file, "utf8")).chainId !== chain
+  )
+    throw Error("Refusing to overwrite a deployment for another network");
   const signers = await ethers.getSigners();
   const owner = signers[0];
-  const local = chain === 31337;
   const names = [
     "MINER_ADDRESS",
     "LIQUIDITY_ADDRESS",
@@ -23,6 +56,10 @@ async function main() {
     throw Error(
       "Set all allocation/treasury addresses before testnet deployment",
     );
+  if (local)
+    await ethers.provider.send("hardhat_setCoinbase", [
+      ethers.hexlify(ethers.randomBytes(20)),
+    ]);
   const token: any = await ethers.deployContract("RASUNToken", [
     owner.address,
     ...recipients,
@@ -48,8 +85,8 @@ async function main() {
     );
   await (await token.configure(mining, oracle, pools)).wait();
   await (await token.freeze()).wait();
-  const deploymentBlock = (await token.deploymentTransaction()!.wait())!
-    .blockNumber;
+  const deploymentReceipt = (await token.deploymentTransaction()!.wait())!;
+  const deploymentBlock = deploymentReceipt.blockNumber;
   if (local) {
     for (const [i, amount] of [
       [7, "100"],
@@ -92,6 +129,9 @@ async function main() {
     testOracle: true,
     mode: local ? "local" : "testnet",
     deploymentBlock,
+    localIdentity: local
+      ? { number: deploymentBlock, hash: deploymentReceipt.blockHash }
+      : null,
     addresses: {
       token: await token.getAddress(),
       registry: await registry.getAddress(),
@@ -101,17 +141,10 @@ async function main() {
     abis,
     demoWallet: local ? signers[7].address : null,
   };
-  const dir = path.resolve(__dirname, "../../deployments");
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, local ? "local.json" : "testnet.json"),
-    JSON.stringify(config, null, 2),
-  );
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(config, null, 2));
   console.log("Deployed", network.name, JSON.stringify(config.addresses));
-  console.log(
-    "Configuration saved to deployments/" +
-      (local ? "local.json" : "testnet.json"),
-  );
+  console.log("Configuration saved to " + file);
 }
 main().catch((e) => {
   console.error(e);

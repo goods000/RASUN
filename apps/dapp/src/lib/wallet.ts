@@ -54,10 +54,21 @@ export class WalletSession {
     if (!this.account) throw Error("CONNECT_FIRST");
     if (this.chainId !== chainId) throw Error("WRONG_NETWORK");
   }
+  async assertLocalRpc(identity?: { number: number; hash: string } | null) {
+    if (!identity) return;
+    if (!this.raw) throw Error("NO_WALLET");
+    const block = await this.raw.request({
+      method: "eth_getBlockByNumber",
+      params: ["0x" + identity.number.toString(16), false],
+    });
+    if (block?.hash?.toLowerCase() !== identity.hash.toLowerCase())
+      throw Error("WRONG_RPC");
+  }
   guardedProvider(
     chainId: number,
     generation: number,
     sender: string,
+    localIdentity?: { number: number; hash: string } | null,
   ): EIP1193 {
     const raw = this.raw;
     if (!raw) throw Error("NO_WALLET");
@@ -71,7 +82,10 @@ export class WalletSession {
     };
     return {
       request: async (request) => {
-        if (request.method !== "eth_sendTransaction")
+        if (
+          request.method !== "eth_sendTransaction" &&
+          !(localIdentity && request.method === "eth_estimateGas")
+        )
           return raw.request(request);
         valid();
         const actualChain = Number(
@@ -80,6 +94,11 @@ export class WalletSession {
         const accounts = await raw.request({ method: "eth_accounts" });
         valid();
         if (actualChain !== chainId) throw Error("WRONG_NETWORK");
+        if (localIdentity) {
+          await this.assertLocalRpc(localIdentity);
+          valid();
+        }
+        if (request.method === "eth_estimateGas") return raw.request(request);
         const transaction = request.params?.[0];
         if (
           !accounts?.some(

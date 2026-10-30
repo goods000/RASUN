@@ -71,6 +71,7 @@ export class ChainService {
       network: c.network,
       mode: c.mode,
       testOracle: c.testOracle,
+      localIdentity: c.localIdentity || null,
       addresses: c.addresses,
       abis: c.abis,
       demoWallet: c.demoWallet,

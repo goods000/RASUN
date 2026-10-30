@@ -17,6 +17,7 @@ class ApiController {
     return {
       ok: true,
       service: "RASUN API",
+      runId: process.env.RASUN_DEV_RUN_ID || null,
       chain,
       index: { lastBlock: this.index.lastBlock, error: this.index.error },
     };

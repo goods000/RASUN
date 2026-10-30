@@ -87,3 +87,48 @@ test("readiness identifies the newly started application rather than an old HTTP
     await close(server);
   }
 });
+
+test("all four services skip occupied ports and can release reservations individually", async () => {
+  const { reserveDevPorts } = await import("../ui-ports.mjs");
+  assert.equal(typeof reserveDevPorts, "function");
+  const occupied = await listener();
+  const port = occupied.address().port;
+  let held;
+  try {
+    held = await reserveDevPorts({
+      chain: port,
+      api: port,
+      dapp: port,
+      admin: port,
+    });
+    const values = ["chain", "api", "dapp", "admin"].map((k) => held[k]);
+    assert.equal(new Set(values).size, 4);
+    assert.ok(values.every((v) => v !== port));
+    await held.release("chain");
+    const server = net.createServer();
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(held.chain, resolve);
+    });
+    await close(server);
+    assert.ok(occupied.listening);
+  } finally {
+    await held?.release();
+    await close(occupied);
+  }
+});
+test("concurrent local runs use different deployments and databases with matching endpoint configuration", async () => {
+  const { localRuntime } = await import("../local-runtime.mjs").catch(
+    () => ({}),
+  );
+  assert.equal(typeof localRuntime, "function");
+  const ports = { chain: 8546, api: 3001, dapp: 5175, admin: 5176 };
+  const a = localRuntime("aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa", ports),
+    b = localRuntime("bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb", ports);
+  assert.notEqual(a.urls.deployment, b.urls.deployment);
+  assert.notEqual(a.environment.DATABASE_URL, b.environment.DATABASE_URL);
+  assert.equal(a.environment.RPC_URL, "http://127.0.0.1:8546");
+  assert.equal(a.environment.RASUN_API_URL, "http://127.0.0.1:3001");
+  assert.equal(a.environment.PORT, "3001");
+  assert.equal(a.environment.DEPLOYMENT_FILE, a.urls.deployment);
+});

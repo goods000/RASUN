@@ -2,6 +2,7 @@ import { config as loadEnv } from "dotenv";
 import { HardhatUserConfig, subtask } from "hardhat/config";
 import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
 import path from "node:path";
+import fs from "node:fs";
 
 // 保留项目原有的 Hardhat 插件导入
 import "@nomicfoundation/hardhat-toolbox";
@@ -23,6 +24,12 @@ subtask(
 );
 
 loadEnv({ path: path.resolve(__dirname, "../.env") });
+let localRuntime: any = {};
+try {
+  localRuntime = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../.local/dev-urls.json"), "utf8"),
+  );
+} catch {}
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.24",
@@ -34,7 +41,12 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
-    localhost: { url: "http://127.0.0.1:8545" },
+    localhost: {
+      url:
+        process.env.RASUN_LOCAL_RPC_URL ||
+        localRuntime.chain ||
+        "http://127.0.0.1:0",
+    },
     bscTestnet: {
       url:
         process.env.BSC_TESTNET_RPC_URL ||

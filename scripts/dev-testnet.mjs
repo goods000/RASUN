@@ -3,6 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import rpc from "./rpc-provider.cjs";
+import diagnostics from "./deployment-error.cjs";
 import { root, env, command, run, waitFor, stop } from "./process.mjs";
 import { reserveDevPorts } from "./ui-ports.mjs";
 import {
@@ -23,6 +24,7 @@ let ports,
   provider,
   runtime,
   closing = false;
+let stage = "deployment file and RPC validation";
 function close(code = 0) {
   if (closing) return;
   closing = true;
@@ -72,7 +74,9 @@ try {
   for (const key of Object.keys(env))
     if (/PRIVATE_KEY|MNEMONIC|DEPLOYER_KEY/i.test(key)) delete env[key];
   fs.mkdirSync(runtime.urls.logs, { recursive: true });
+  stage = "database initialization";
   await run(["db:setup"]);
+  stage = "API build";
   await run(["--filter", "@rasun/api", "build"]);
   function start(name, args) {
     const fd = fs.openSync(path.join(runtime.urls.logs, name + ".log"), "w");
@@ -91,6 +95,8 @@ try {
     });
   }
   await ports.release("api");
+  stage = "API startup and health check";
+  console.log(`Starting API: ${runtime.urls.api}; logs: ${runtime.urls.logs}`);
   start("api", ["--filter", "@rasun/api", "start"]);
   await waitFor(
     runtime.urls.api + "/api/health",
@@ -107,6 +113,7 @@ try {
   )
     throw Error("Testnet API deployment mismatch");
   for (const name of ["dapp", "admin"]) {
+    stage = name + " startup";
     await ports.release(name);
     start(name, ["dev:" + name]);
     await waitFor(
@@ -123,15 +130,8 @@ try {
   );
   provider.destroy();
 } catch (error) {
-  const { deploymentError } = require("./deployment-error.cjs");
-  console.error(
-    deploymentError(
-      error,
-      runtime
-        ? "testnet services startup"
-        : "testnet RPC and contract validation",
-    ),
-  );
+  console.error(diagnostics.deploymentError(error, stage));
+  if (runtime) console.error("Startup logs: " + runtime.urls.logs);
   console.error(
     "Testnet startup failed; verify RPC access, deployment metadata/contracts and child logs. No local chain fallback or deployment was attempted.",
   );
